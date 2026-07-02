@@ -26,6 +26,7 @@ function createInstance() {
 }
 
 export const api = createInstance();
+const publicApi = createInstance();
 
 api.interceptors.request.use((config) => {
   const token = getToken();
@@ -50,7 +51,7 @@ api.interceptors.response.use(
 
 export const authApi = {
   async login(payload: { email: string; password: string }) {
-    const { data } = await api.post<{ access_token: string }>(
+    const { data } = await publicApi.post<{ access_token: string }>(
       "/auth/login",
       payload,
     );
@@ -73,11 +74,8 @@ export const offersApi = {
     const { data } = await api.get<Offer[]>("/offers", { params });
     return data;
   },
-  async send(offerId: string, payload: SendOfferPayload) {
-    const { data } = await api.post<SendOfferResponse>(
-      `/offers/send-offer/${offerId}`,
-      payload,
-    );
+  async send(payload: SendOfferPayload) {
+    const { data } = await api.post<SendOfferResponse>("/offers/send-offer", payload);
     return data;
   },
 };

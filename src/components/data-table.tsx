@@ -1,4 +1,21 @@
 import type { ReactNode } from "react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "./ui/pagination";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./ui/table";
 
 export type DataTableColumn<T> = {
   header: string;
@@ -11,6 +28,14 @@ type DataTableProps<T> = {
   data: T[];
   emptyMessage?: string;
   getRowKey: (row: T, index: number) => string;
+  loading?: boolean;
+  loadingMessage?: string;
+  limit?: number;
+  onPaginationChange?: (pagination: { page: number; limit: number }) => void;
+  page?: number;
+  pagiantionEnabled?: boolean;
+  paginationEnabled?: boolean;
+  setPage?: (page: number) => void;
 };
 
 export function DataTable<T>({
@@ -18,43 +43,159 @@ export function DataTable<T>({
   data,
   emptyMessage = "Nenhum registro encontrado.",
   getRowKey,
+  limit = 20,
+  loading = false,
+  loadingMessage = "Carregando...",
+  onPaginationChange,
+  page = 1,
+  pagiantionEnabled = false,
+  paginationEnabled = false,
+  setPage,
 }: DataTableProps<T>) {
+  const shouldShowPagination = paginationEnabled || pagiantionEnabled;
+
+  function handlePageChange(nextPage: number) {
+    setPage?.(nextPage);
+    onPaginationChange?.({ page: nextPage, limit });
+  }
+
+  function handlePaginationClick(event: React.MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+  }
+
   return (
     <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-          <thead className="bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
-            <tr>
+        <Table>
+          <TableHeader>
+            <TableRow>
               {columns.map((column) => (
-                <th className={`px-4 py-3 font-semibold ${column.className ?? ""}`} key={column.header}>
+                <TableHead className={column.className ?? ""} key={column.header}>
                   {column.header}
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-200">
-            {data.length ? (
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell className="py-8 text-center text-zinc-500" colSpan={columns.length}>
+                  {loadingMessage}
+                </TableCell>
+              </TableRow>
+            ) : data.length ? (
               data.map((row, index) => (
-                <tr className="align-top text-zinc-700" key={getRowKey(row, index)}>
+                <TableRow key={getRowKey(row, index)}>
                   {columns.map((column) => (
-                    <td className={`px-4 py-3 ${column.className ?? ""}`} key={column.header}>
+                    <TableCell className={column.className ?? ""} key={column.header}>
                       {typeof column.accessor === "function"
                         ? column.accessor(row)
                         : String(row[column.accessor] ?? "")}
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))
             ) : (
-              <tr>
-                <td className="px-4 py-8 text-center text-zinc-500" colSpan={columns.length}>
+              <TableRow>
+                <TableCell className="py-8 text-center text-zinc-500" colSpan={columns.length}>
                   {emptyMessage}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
+      {shouldShowPagination ? (
+        <div className="border-t border-zinc-200 px-4 py-3">
+          <Pagination className="justify-start sm:justify-center">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  aria-disabled={loading || page <= 1}
+                  className={loading || page <= 1 ? "pointer-events-none opacity-50" : ""}
+                  href="#"
+                  onClick={(event) => {
+                    handlePaginationClick(event);
+                    if (!loading && page > 1) {
+                      handlePageChange(page - 1);
+                    }
+                  }}
+                />
+              </PaginationItem>
+              {page > 2 ? (
+                <PaginationItem>
+                  <PaginationLink
+                    href="#"
+                    onClick={(event) => {
+                      handlePaginationClick(event);
+                      if (!loading) {
+                        handlePageChange(1);
+                      }
+                    }}
+                  >
+                    1
+                  </PaginationLink>
+                </PaginationItem>
+              ) : null}
+              {page > 3 ? (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : null}
+              {page > 1 ? (
+                <PaginationItem>
+                  <PaginationLink
+                    href="#"
+                    onClick={(event) => {
+                      handlePaginationClick(event);
+                      if (!loading) {
+                        handlePageChange(page - 1);
+                      }
+                    }}
+                  >
+                    {page - 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ) : null}
+              <PaginationItem>
+                <PaginationLink href="#" isActive onClick={handlePaginationClick}>
+                  {page}
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink
+                  className={loading ? "pointer-events-none opacity-50" : ""}
+                  href="#"
+                  onClick={(event) => {
+                    handlePaginationClick(event);
+                    if (!loading) {
+                      handlePageChange(page + 1);
+                    }
+                  }}
+                >
+                  {page + 1}
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  aria-disabled={loading}
+                  className={loading ? "pointer-events-none opacity-50" : ""}
+                  href="#"
+                  onClick={(event) => {
+                    handlePaginationClick(event);
+                    if (!loading) {
+                      handlePageChange(page + 1);
+                    }
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      ) : null}
     </div>
   );
 }
