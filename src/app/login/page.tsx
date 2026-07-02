@@ -50,9 +50,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4">
       <Card className="w-full max-w-md">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-zinc-950">
-            Entrar no painel
-          </h1>
+          <h1 className="text-2xl font-semibold text-zinc-950">Entrar</h1>
           <p className="mt-1 text-sm text-zinc-600">
             Use seu email e senha para acessar o Offer Gateway.
           </p>
