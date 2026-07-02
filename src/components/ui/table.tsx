@@ -35,7 +35,7 @@ export function TableRow({
   className = "",
   ...props
 }: ComponentPropsWithoutRef<"tr">) {
-  return <tr className={`align-top text-zinc-700 ${className}`} {...props} />;
+  return <tr className={`align-middle text-zinc-700 ${className}`} {...props} />;
 }
 
 export function TableHead({
@@ -51,5 +51,5 @@ export function TableCell({
   className = "",
   ...props
 }: ComponentPropsWithoutRef<"td">) {
-  return <td className={`px-4 py-3 ${className}`} {...props} />;
+  return <td className={`px-4 py-3 align-middle ${className}`} {...props} />;
 }
