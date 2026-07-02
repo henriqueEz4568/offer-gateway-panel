@@ -33,6 +33,7 @@ export type Offer = {
 };
 
 export type SendOfferPayload = {
+  offerId: string;
   to: string;
   delay?: number;
   instance_name?: string;

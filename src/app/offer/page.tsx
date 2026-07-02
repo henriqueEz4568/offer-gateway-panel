@@ -1,9 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
-import { Pagination } from "@/components/pagination";
 import { Alert, Card, PageHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,13 +26,13 @@ export default function OfferPage() {
   const [providerId, setProviderId] = useState("shopee");
   const [offerIdFilter, setOfferIdFilter] = useState("");
   const [search, setSearch] = useState("");
-  const [limit, setLimit] = useState(20);
+  const [limit] = useState(20);
   const [page, setPage] = useState(1);
   const [selectedOfferId, setSelectedOfferId] = useState("");
   const [to, setTo] = useState("");
   const [delay, setDelay] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
+  const [sendingOfferId, setSendingOfferId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -82,24 +81,22 @@ export default function OfferPage() {
     await loadOffers(1);
   }
 
-  async function handlePageChange(nextPage: number) {
-    setPage(nextPage);
-    await loadOffers(nextPage);
+  async function handlePaginationChange({
+    page: nextPage,
+    limit: nextLimit,
+  }: {
+    page: number;
+    limit: number;
+  }) {
+    await loadOffers(nextPage, nextLimit);
   }
 
-  async function handleLimitChange(nextLimit: number) {
-    setLimit(nextLimit);
-    setPage(1);
-    await loadOffers(1, nextLimit);
-  }
-
-  async function handleSend(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const sendOffer = useCallback(async ({ offerId }: { offerId: string }) => {
     setError(null);
     setSuccess(null);
 
     const validationError =
-      validatePositiveInteger(selectedOfferId, "Offer ID") ??
+      validatePositiveInteger(offerId, "Offer ID") ??
       required(to, "Destino") ??
       validatePositiveInteger(delay, "Delay");
 
@@ -108,24 +105,27 @@ export default function OfferPage() {
       return;
     }
 
-    setSending(true);
+    setSendingOfferId(offerId);
 
     try {
       const payload = {
+        offerId: offerId.trim(),
         to: to.trim(),
         ...(delay.trim() ? { delay: Number(delay) } : {}),
       };
-      const data: SendOfferResponse = await offersApi.send(
-        selectedOfferId.trim(),
-        payload,
-      );
+      const data: SendOfferResponse = await offersApi.send(payload);
 
       setSuccess(`Offer enviada pela instancia ${data.instanceName}.`);
     } catch (err) {
       setError(formatApiError(err));
     } finally {
-      setSending(false);
+      setSendingOfferId(null);
     }
+  }, [delay, to]);
+
+  async function handleSend(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await sendOffer({ offerId: selectedOfferId });
   }
 
   const columns = useMemo<DataTableColumn<Offer>[]>(
@@ -171,15 +171,16 @@ export default function OfferPage() {
         header: "Acao",
         accessor: (offer) => (
           <Button
-            onClick={() => setSelectedOfferId(offer.id)}
+            disabled={sendingOfferId === offer.id}
+            onClick={() => void sendOffer({ offerId: offer.id })}
             variant="secondary"
           >
-            Enviar
+            {sendingOfferId === offer.id ? "Enviando..." : "Enviar"}
           </Button>
         ),
       },
     ],
-    [],
+    [sendOffer, sendingOfferId],
   );
 
   return (
@@ -248,8 +249,8 @@ export default function OfferPage() {
             value={delay}
           />
           <div className="flex items-end">
-            <Button disabled={sending} type="submit">
-              {sending ? "Enviando..." : "Enviar offer"}
+            <Button disabled={sendingOfferId === selectedOfferId} type="submit">
+              {sendingOfferId === selectedOfferId ? "Enviando..." : "Enviar offer"}
             </Button>
           </div>
         </form>
@@ -258,15 +259,15 @@ export default function OfferPage() {
       <DataTable
         columns={columns}
         data={offers}
-        emptyMessage={loading ? "Carregando offers..." : "Nenhuma offer encontrada."}
+        emptyMessage="Nenhuma offer encontrada."
         getRowKey={(offer) => `${offer.provider.id}-${offer.id}`}
-      />
-      <Pagination
-        disabled={loading}
         limit={limit}
-        onLimitChange={(nextLimit) => void handleLimitChange(nextLimit)}
-        onPageChange={(nextPage) => void handlePageChange(nextPage)}
+        loading={loading}
+        loadingMessage="Carregando offers..."
+        onPaginationChange={(pagination) => void handlePaginationChange(pagination)}
         page={page}
+        paginationEnabled
+        setPage={setPage}
       />
     </>
   );

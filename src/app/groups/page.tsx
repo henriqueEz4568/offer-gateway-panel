@@ -151,13 +151,14 @@ export default function GroupsPage() {
           />
           <Select
             label="Status ao linkar"
-            onChange={(event) => setStatus(event.target.value as GroupStatus)}
+            onValueChange={(value) => setStatus(value as GroupStatus)}
+            options={[
+              { label: "pending", value: "pending" },
+              { label: "active", value: "active" },
+              { label: "disabled", value: "disabled" },
+            ]}
             value={status}
-          >
-            <option value="pending">pending</option>
-            <option value="active">active</option>
-            <option value="disabled">disabled</option>
-          </Select>
+          />
           <div className="flex items-end lg:col-span-5">
             <Button disabled={loading} type="submit">
               {loading ? "Carregando..." : "Buscar grupos"}
