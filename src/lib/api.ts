@@ -12,7 +12,7 @@ import type {
 } from "./types";
 
 function buildBaseUrl() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
   const baseUrl = apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
 
   if (

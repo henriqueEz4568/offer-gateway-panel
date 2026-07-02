@@ -13,7 +13,7 @@ const requestHeaders = [
 ];
 
 function getBackendUrl() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
 
   return apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
 }
