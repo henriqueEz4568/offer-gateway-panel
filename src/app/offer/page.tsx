@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Alert, Card, PageHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import { isAuthenticated } from "@/lib/auth";
-import { offersApi } from "@/lib/api";
-import type { Offer, SendOfferResponse } from "@/lib/types";
+import { groupsApi, offersApi } from "@/lib/api";
+import type { LinkedGroup, Offer, SendOfferResponse } from "@/lib/types";
 import {
   formatApiError,
   required,
@@ -31,7 +31,9 @@ export default function OfferPage() {
   const [selectedOfferId, setSelectedOfferId] = useState("");
   const [to, setTo] = useState("");
   const [delay, setDelay] = useState("");
+  const [groups, setGroups] = useState<LinkedGroup[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingGroups, setLoadingGroups] = useState(false);
   const [sendingOfferId, setSendingOfferId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -65,6 +67,19 @@ export default function OfferPage() {
     }
   }
 
+  async function loadGroups() {
+    setLoadingGroups(true);
+
+    try {
+      const data = await groupsApi.listLinked();
+      setGroups(data);
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setLoadingGroups(false);
+    }
+  }
+
   useEffect(() => {
     if (!isAuthenticated()) {
       router.replace("/login");
@@ -72,6 +87,7 @@ export default function OfferPage() {
     }
 
     queueMicrotask(() => void loadOffers());
+    queueMicrotask(() => void loadGroups());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
@@ -183,6 +199,15 @@ export default function OfferPage() {
     [sendOffer, sendingOfferId],
   );
 
+  const groupOptions = useMemo(
+    () =>
+      groups.map((group) => ({
+        label: `${group.name} (${group.status})`,
+        value: group.externalId,
+      })),
+    [groups],
+  );
+
   return (
     <>
       <PageHeader
@@ -235,10 +260,14 @@ export default function OfferPage() {
             placeholder="Selecione na tabela ou digite"
             value={selectedOfferId}
           />
-          <Input
+          <Select
+            disabled={loadingGroups || groupOptions.length === 0}
             label="Destino"
-            onChange={(event) => setTo(event.target.value)}
-            placeholder="5511999999999 ou id do grupo"
+            onValueChange={setTo}
+            options={groupOptions}
+            placeholder={
+              loadingGroups ? "Carregando grupos..." : "Selecione um grupo"
+            }
             value={to}
           />
           <Input

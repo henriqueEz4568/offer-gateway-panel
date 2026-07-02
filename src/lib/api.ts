@@ -12,8 +12,18 @@ import type {
 } from "./types";
 
 function buildBaseUrl() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
-  return apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+  const baseUrl = apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
+
+  if (
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    baseUrl.startsWith("http://")
+  ) {
+    return "/api/proxy";
+  }
+
+  return baseUrl;
 }
 
 function createInstance() {
@@ -81,6 +91,15 @@ export const offersApi = {
 };
 
 export const instancesApi = {
+  async list(params: {
+    source?: "database" | "evolution";
+    id?: string;
+    external_id?: string;
+    name?: string;
+  }) {
+    const { data } = await api.get<Instance[]>("/instances", { params });
+    return data;
+  },
   async create(payload: { name: string; type?: string; number?: number }) {
     const { data } = await api.post<Instance>("/instances", payload);
     return data;
@@ -93,12 +112,21 @@ export const instancesApi = {
     const { data } = await api.post<Instance>(`/instances/${id}/connection`);
     return data;
   },
+  async delete(id: number) {
+    await api.delete(`/instances/${id}`);
+  },
 };
 
 export const groupsApi = {
   async list(params: { instance_name?: string; search?: string }) {
     const { data } = await api.get<EvolutionGroup[]>("/evolution/groups", {
       params,
+    });
+    return data;
+  },
+  async listLinked() {
+    const { data } = await api.get<LinkedGroup[]>("/evolution/groups", {
+      params: { source: "database" },
     });
     return data;
   },
