@@ -14,27 +14,38 @@ import {
   validateGroupStatus,
 } from "@/lib/validation";
 
+type GroupSource = "database" | "evolution";
+type GroupRow = EvolutionGroup | LinkedGroup;
+
+function isLinkedGroup(group: GroupRow): group is LinkedGroup {
+  return "externalId" in group;
+}
+
 export default function GroupsPage() {
   const router = useRouter();
-  const [groups, setGroups] = useState<EvolutionGroup[]>([]);
-  const [linkedGroups, setLinkedGroups] = useState<LinkedGroup[]>([]);
+  const [groups, setGroups] = useState<GroupRow[]>([]);
+  const [source, setSource] = useState<GroupSource>("database");
   const [instanceName, setInstanceName] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<GroupStatus>("pending");
   const [loading, setLoading] = useState(false);
+  // const [importingGroups, setImportingGroups] = useState(false);
+  // const [resettingGroups, setResettingGroups] = useState(false);
   const [linkingGroupId, setLinkingGroupId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  async function loadGroups() {
+  const loadGroups = useCallback(async () => {
     setError(null);
     setSuccess(null);
     setLoading(true);
 
     try {
       const data = await groupsApi.list({
-        instance_name: instanceName.trim() || undefined,
-        search: search.trim() || undefined,
+        source,
+        instance_name:
+          source === "evolution" ? instanceName.trim() || undefined : undefined,
+        search: source === "evolution" ? search.trim() || undefined : undefined,
       });
       setGroups(data);
     } catch (err) {
@@ -42,7 +53,7 @@ export default function GroupsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [instanceName, search, source]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -58,6 +69,58 @@ export default function GroupsPage() {
     event.preventDefault();
     await loadGroups();
   }
+
+  // async function handleImportGroups() {
+  //   setError(null);
+  //   setSuccess(null);
+  //
+  //   if (!validateGroupStatus(status)) {
+  //     setError("Status deve ser disabled, active ou pending.");
+  //     return;
+  //   }
+  //
+  //   setImportingGroups(true);
+  //
+  //   try {
+  //     const data = await groupsApi.importAll(
+  //       {
+  //         instance_name: instanceName.trim() || undefined,
+  //         status,
+  //       },
+  //       { search: search.trim() || undefined },
+  //     );
+  //     setSource("database");
+  //     setGroups(data.groups);
+  //     setSuccess(
+  //       `${data.total} grupo(s) processado(s): ${data.created} criado(s), ${data.existing} existente(s).`,
+  //     );
+  //   } catch (err) {
+  //     setError(formatApiError(err));
+  //   } finally {
+  //     setImportingGroups(false);
+  //   }
+  // }
+  //
+  // async function handleResetGroups() {
+  //   setError(null);
+  //   setSuccess(null);
+  //   setResettingGroups(true);
+  //
+  //   try {
+  //     const data = await groupsApi.reset({
+  //       instance_name: instanceName.trim() || undefined,
+  //     });
+  //     setSource("database");
+  //     setGroups(data.groups);
+  //     setSuccess(
+  //       `${data.total} grupo(s) sincronizado(s): ${data.created} criado(s), ${data.updated} atualizado(s), ${data.deleted} removido(s).`,
+  //     );
+  //   } catch (err) {
+  //     setError(formatApiError(err));
+  //   } finally {
+  //     setResettingGroups(false);
+  //   }
+  // }
 
   const handleLink = useCallback(
     async (group: EvolutionGroup) => {
@@ -76,11 +139,14 @@ export default function GroupsPage() {
           instance_name: instanceName.trim() || undefined,
           status,
         });
-        setLinkedGroups((current) => {
-          const exists = current.some((item) => item.id === linked.id);
+        setSource("database");
+        setGroups((current) => {
+          const linkedGroups = current.filter(isLinkedGroup);
+          const exists = linkedGroups.some((item) => item.id === linked.id);
+
           return exists
-            ? current.map((item) => (item.id === linked.id ? linked : item))
-            : [linked, ...current];
+            ? linkedGroups.map((item) => (item.id === linked.id ? linked : item))
+            : [linked, ...linkedGroups];
         });
         setSuccess(`Grupo ${linked.name} linkado com status ${linked.status}.`);
       } catch (err) {
@@ -92,41 +158,58 @@ export default function GroupsPage() {
     [instanceName, status],
   );
 
-  const groupColumns = useMemo<DataTableColumn<EvolutionGroup>[]>(
-    () => [
-      { header: "ID externo", accessor: "id" },
-      { header: "Nome", accessor: "name" },
-      { header: "Subject", accessor: "subject" },
-      {
-        header: "Acao",
-        accessor: (group) => (
-          <Button
-            disabled={linkingGroupId === group.id}
-            onClick={() => void handleLink(group)}
-            variant="secondary"
-          >
-            {linkingGroupId === group.id ? "Linkando..." : "Linkar database"}
-          </Button>
-        ),
-      },
-    ],
-    [handleLink, linkingGroupId],
-  );
-
-  const linkedColumns = useMemo<DataTableColumn<LinkedGroup>[]>(
-    () => [
-      { header: "ID", accessor: "id" },
-      { header: "ID externo", accessor: "externalId" },
-      { header: "Nome", accessor: "name" },
-      { header: "Status", accessor: "status" },
-    ],
-    [],
+  const columns = useMemo<DataTableColumn<GroupRow>[]>(
+    () =>
+      source === "database"
+        ? [
+            {
+              header: "ID",
+              accessor: (group) => (isLinkedGroup(group) ? group.id : "-"),
+              className: "text-center",
+            },
+            {
+              header: "ID externo",
+              accessor: (group) =>
+                isLinkedGroup(group) ? group.externalId : group.id,
+              className: "text-center",
+            },
+            { header: "Nome", accessor: "name", className: "text-center" },
+            {
+              header: "Status",
+              accessor: (group) => (isLinkedGroup(group) ? group.status : "-"),
+              className: "text-center",
+            },
+          ]
+        : [
+            { header: "ID externo", accessor: "id", className: "text-center" },
+            { header: "Nome", accessor: "name", className: "text-center" },
+            {
+              header: "Subject",
+              accessor: (group) => (isLinkedGroup(group) ? "-" : group.subject),
+              className: "text-center",
+            },
+            {
+              header: "Acoes",
+              className: "text-center",
+              accessor: (group) =>
+                isLinkedGroup(group) ? null : (
+                  <Button
+                    disabled={linkingGroupId === group.id}
+                    onClick={() => void handleLink(group)}
+                    variant="secondary"
+                  >
+                    {linkingGroupId === group.id ? "Salvando..." : "Salvar"}
+                  </Button>
+                ),
+            },
+          ],
+    [handleLink, linkingGroupId, source],
   );
 
   return (
     <>
       <PageHeader
-        description="Liste grupos da Evolution API e cadastre o vinculo local no database."
+        description="Liste grupos locais ou consulte diretamente a Evolution API."
         title="Grupos"
       />
 
@@ -134,23 +217,33 @@ export default function GroupsPage() {
       {success ? <Alert tone="success">{success}</Alert> : null}
 
       <Card>
-        <form className="grid gap-4 lg:grid-cols-5" onSubmit={handleFilter}>
+        <form
+          className="grid gap-4 lg:grid-cols-[minmax(120px,0.7fr)_minmax(180px,1fr)_minmax(180px,1fr)_minmax(150px,0.8fr)_auto]"
+          onSubmit={handleFilter}
+        >
+          <Select
+            label="Source"
+            onValueChange={(value) => setSource(value as GroupSource)}
+            options={[
+              { label: "database", value: "database" },
+              { label: "evolution", value: "evolution" },
+            ]}
+            value={source}
+          />
           <Input
-            className="lg:col-span-2"
             label="Instancia"
             onChange={(event) => setInstanceName(event.target.value)}
             placeholder="minha-instancia"
             value={instanceName}
           />
           <Input
-            className="lg:col-span-2"
             label="Busca"
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Nome ou ID do grupo"
             value={search}
           />
           <Select
-            label="Status ao linkar"
+            label="Status ao salvar"
             onValueChange={(value) => setStatus(value as GroupStatus)}
             options={[
               { label: "pending", value: "pending" },
@@ -159,37 +252,44 @@ export default function GroupsPage() {
             ]}
             value={status}
           />
-          <div className="flex items-end lg:col-span-5">
+          <div className="flex items-end">
             <Button disabled={loading} type="submit">
-              {loading ? "Carregando..." : "Buscar grupos"}
+              {loading ? "Filtrando..." : "Filtrar"}
             </Button>
+            {/* <Button
+              disabled={importingGroups}
+              onClick={() => void handleImportGroups()}
+              type="button"
+              variant="secondary"
+            >
+              {importingGroups ? "Importando..." : "Importar resultado"}
+            </Button> */}
+            {/* <Button
+              disabled={resettingGroups}
+              onClick={() => void handleResetGroups()}
+              type="button"
+              variant="outline"
+            >
+              {resettingGroups ? "Sincronizando..." : "Resetar salvos"}
+            </Button> */}
           </div>
         </form>
       </Card>
 
-      <section className="grid gap-3">
-        <h2 className="text-lg font-semibold text-zinc-950">
-          Grupos da Evolution
-        </h2>
-        <DataTable
-          columns={groupColumns}
-          data={groups}
-          emptyMessage={loading ? "Carregando grupos..." : "Nenhum grupo encontrado."}
-          getRowKey={(group) => group.id}
-        />
-      </section>
-
-      <section className="grid gap-3">
-        <h2 className="text-lg font-semibold text-zinc-950">
-          Grupos linkados nesta sessao
-        </h2>
-        <DataTable
-          columns={linkedColumns}
-          data={linkedGroups}
-          emptyMessage="Nenhum grupo linkado nesta sessao."
-          getRowKey={(group) => String(group.id)}
-        />
-      </section>
+      <DataTable
+        columns={columns}
+        data={groups}
+        emptyMessage="Nenhum grupo encontrado."
+        getRowKey={(group, index) =>
+          String(
+            isLinkedGroup(group)
+              ? group.id
+              : group.id ?? group.name ?? group.subject ?? index,
+          )
+        }
+        loading={loading}
+        loadingMessage="Carregando grupos..."
+      />
     </>
   );
 }
