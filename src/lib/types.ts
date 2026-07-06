@@ -77,3 +77,19 @@ export type LinkedGroup = {
 };
 
 export type GroupStatus = LinkedGroup["status"];
+
+export type ImportGroupsResponse = {
+  total: number;
+  created: number;
+  existing: number;
+  groups: LinkedGroup[];
+};
+
+export type ResetGroupsResponse = {
+  total: number;
+  created: number;
+  updated: number;
+  deleted: number;
+  groups: LinkedGroup[];
+  deletedGroups: LinkedGroup[];
+};

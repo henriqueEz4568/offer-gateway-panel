@@ -3,9 +3,11 @@ import { getToken, logout } from "./auth";
 import type {
   EvolutionGroup,
   GroupStatus,
+  ImportGroupsResponse,
   Instance,
   LinkedGroup,
   Offer,
+  ResetGroupsResponse,
   SendOfferPayload,
   SendOfferResponse,
   User,
@@ -118,9 +120,20 @@ export const instancesApi = {
 };
 
 export const groupsApi = {
-  async list(params: { instance_name?: string; search?: string }) {
+  async list(params: {
+    source: "database" | "evolution";
+    instance_name?: string;
+    search?: string;
+  }) {
+    const { data } = await api.get<(EvolutionGroup | LinkedGroup)[]>(
+      "/evolution/groups",
+      { params },
+    );
+    return data;
+  },
+  async listEvolution(params: { instance_name?: string; search?: string }) {
     const { data } = await api.get<EvolutionGroup[]>("/evolution/groups", {
-      params,
+      params: { ...params, source: "evolution" },
     });
     return data;
   },
@@ -128,6 +141,24 @@ export const groupsApi = {
     const { data } = await api.get<LinkedGroup[]>("/evolution/groups", {
       params: { source: "database" },
     });
+    return data;
+  },
+  async importAll(
+    payload: { instance_name?: string; status?: GroupStatus },
+    params?: { search?: string },
+  ) {
+    const { data } = await api.post<ImportGroupsResponse>(
+      "/evolution/groups/import",
+      payload,
+      { params },
+    );
+    return data;
+  },
+  async reset(payload: { instance_name?: string }) {
+    const { data } = await api.post<ResetGroupsResponse>(
+      "/evolution/groups/reset",
+      payload,
+    );
     return data;
   },
   async link(
