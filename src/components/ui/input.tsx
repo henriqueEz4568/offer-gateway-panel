@@ -5,17 +5,21 @@ import type { InputHTMLAttributes } from "react";
 type FieldProps = {
   label: string;
   error?: string | null;
+  labelClassName?: string;
 };
 
 export function Input({
   label,
   error,
   className = "",
+  labelClassName = "",
   ...props
 }: FieldProps & InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="grid gap-1.5">
-      <LabelPrimitive.Root className="text-sm font-medium text-zinc-800">
+      <LabelPrimitive.Root
+        className={`${labelClassName ? labelClassName : "text-sm font-medium text-zinc-800"}`}
+      >
         {label}
       </LabelPrimitive.Root>
       <input
@@ -65,7 +69,9 @@ export function Select({
           className={`inline-flex h-10 items-center justify-between gap-2 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-950 outline-none transition-colors focus:border-zinc-950 disabled:cursor-not-allowed disabled:text-zinc-400 ${className}`}
         >
           <SelectPrimitive.Value placeholder={placeholder} />
-          <SelectPrimitive.Icon className="text-zinc-500">v</SelectPrimitive.Icon>
+          <SelectPrimitive.Icon className="text-zinc-500">
+            v
+          </SelectPrimitive.Icon>
         </SelectPrimitive.Trigger>
         <SelectPrimitive.Portal>
           <SelectPrimitive.Content
