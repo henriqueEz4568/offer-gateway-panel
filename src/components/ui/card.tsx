@@ -1,8 +1,16 @@
 import type { ReactNode } from "react";
 
-export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function Card({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <section className={`rounded-lg border border-zinc-200 bg-white p-5 shadow-sm ${className}`}>
+    <section
+      className={`rounded-lg border border-zinc-200  shadow-sm ${className} ${["p-"].includes(className) ? "" : "p-5"}`}
+    >
       {children}
     </section>
   );
