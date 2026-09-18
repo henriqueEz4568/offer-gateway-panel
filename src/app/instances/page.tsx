@@ -23,7 +23,9 @@ import { formatApiError, validatePositiveInteger } from "@/lib/validation";
 type InstanceSource = "database" | "evolution";
 
 function formatQrCodeSource(base64: string) {
-  return base64.startsWith("data:") ? base64 : `data:image/png;base64,${base64}`;
+  return base64.startsWith("data:")
+    ? base64
+    : `data:image/png;base64,${base64}`;
 }
 
 export default function InstancesPage() {
@@ -35,8 +37,11 @@ export default function InstancesPage() {
   const [name, setName] = useState("");
   const [connectingId, setConnectingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [instanceToDelete, setInstanceToDelete] = useState<Instance | null>(null);
+  const [instanceToDelete, setInstanceToDelete] = useState<Instance | null>(
+    null,
+  );
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [qrInstanceName, setQrInstanceName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +94,7 @@ export default function InstancesPage() {
     setError(null);
     setSuccess(null);
     setQrCode(null);
+    setPairingCode(null);
     setQrInstanceName(instance.name);
     setConnectingId(instance.id);
 
@@ -98,6 +104,9 @@ export default function InstancesPage() {
         current.map((item) => (item.id === connected.id ? connected : item)),
       );
       setQrCode(connected.connection?.base64 ?? null);
+      if (connected.connection?.pairingCode) {
+        setPairingCode(connected.connection.pairingCode);
+      }
       setQrInstanceName(connected.name);
       setSuccess(`Conexao solicitada para ${connected.name}.`);
     } catch (err) {
@@ -166,7 +175,9 @@ export default function InstancesPage() {
             <DropdownMenuTrigger asChild>
               <Button
                 aria-label={`Acoes da instance ${instance.name}`}
-                disabled={connectingId === instance.id || deletingId === instance.id}
+                disabled={
+                  connectingId === instance.id || deletingId === instance.id
+                }
                 size="icon"
                 variant="secondary"
               >
@@ -262,26 +273,46 @@ export default function InstancesPage() {
       <Modal
         description={qrInstanceName}
         footer={
-          <Button onClick={() => setQrCode(null)} type="button" variant="secondary">
+          <Button
+            onClick={() => {
+              setQrCode(null);
+              setPairingCode(null);
+            }}
+            type="button"
+            variant="secondary"
+          >
             Fechar
           </Button>
         }
         onOpenChange={(open) => {
           if (!open) {
             setQrCode(null);
+            setPairingCode(null);
           }
         }}
-        open={Boolean(qrCode)}
-        title="QR code"
+        open={Boolean(qrCode || pairingCode)}
+        title="Conectar instance"
       >
-        {qrCode ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            alt={`QR code da instance ${qrInstanceName}`}
-            className="mx-auto h-72 w-72 rounded-md border border-zinc-200 object-contain"
-            src={formatQrCodeSource(qrCode)}
-          />
-        ) : null}
+        <div className="grid gap-4">
+          {qrCode ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              alt={`QR code da instance ${qrInstanceName}`}
+              className="mx-auto h-72 w-72 rounded-md border border-zinc-200 object-contain"
+              src={formatQrCodeSource(qrCode)}
+            />
+          ) : null}
+          {pairingCode ? (
+            <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4 text-center">
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                Pairing code
+              </p>
+              <p className="mt-2 break-all font-mono text-2xl font-semibold text-zinc-950">
+                {pairingCode}
+              </p>
+            </div>
+          ) : null}
+        </div>
       </Modal>
 
       <ConfirmationModal

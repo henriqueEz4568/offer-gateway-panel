@@ -55,10 +55,14 @@ export type Instance = {
   token: string;
   connection?: {
     status: string;
+    pairingCode?: string;
+    code?: string;
     base64?: string;
+    count?: number;
   };
   created: string;
   modified: string;
+  removed?: string | null;
 };
 
 export type EvolutionGroup = {
