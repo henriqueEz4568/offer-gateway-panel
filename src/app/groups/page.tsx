@@ -1,277 +1,230 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Filter, Save, Users } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
-import { Alert, Card, PageHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, PageHeader } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
+import { toast } from "@/components/ui/toaster";
 import { groupsApi } from "@/lib/api";
-import { isAuthenticated } from "@/lib/auth";
+import { getGroupStatus, groupStatusLabels } from "@/lib/status";
 import type { EvolutionGroup, GroupStatus, LinkedGroup } from "@/lib/types";
-import {
-  formatApiError,
-  validateGroupStatus,
-} from "@/lib/validation";
+import { formatApiError, validateGroupStatus } from "@/lib/validation";
 
 type GroupSource = "database" | "evolution";
 type GroupRow = EvolutionGroup | LinkedGroup;
+
+const sourceOptions = [
+  { label: "Banco de dados", value: "database" },
+  { label: "Evolution API", value: "evolution" },
+];
+
+const statusOptions = (Object.keys(groupStatusLabels) as GroupStatus[]).map(
+  (value) => ({ label: groupStatusLabels[value], value }),
+);
 
 function isLinkedGroup(group: GroupRow): group is LinkedGroup {
   return "externalId" in group;
 }
 
 export default function GroupsPage() {
-  const router = useRouter();
   const [groups, setGroups] = useState<GroupRow[]>([]);
   const [source, setSource] = useState<GroupSource>("database");
+  // Source of the rows currently displayed (the filter may change before submit).
+  const [loadedSource, setLoadedSource] = useState<GroupSource>("database");
   const [instanceName, setInstanceName] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<GroupStatus>("pending");
-  const [loading, setLoading] = useState(false);
-  // const [importingGroups, setImportingGroups] = useState(false);
-  // const [resettingGroups, setResettingGroups] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [linkingGroupId, setLinkingGroupId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
-  const loadGroups = useCallback(async () => {
-    setError(null);
-    setSuccess(null);
+  /** Async part only: state is updated in callbacks once the request settles. */
+  function fetchGroups(sourceToLoad: GroupSource) {
+    const fromEvolution = sourceToLoad === "evolution";
+
+    return groupsApi
+      .list({
+        source: sourceToLoad,
+        instance_name: fromEvolution ? instanceName.trim() || undefined : undefined,
+        search: fromEvolution ? search.trim() || undefined : undefined,
+      })
+      .then((data) => {
+        setGroups(data);
+        setLoadedSource(sourceToLoad);
+      })
+      .catch((err) => {
+        toast.error("Não foi possível carregar os grupos.", {
+          description: formatApiError(err),
+        });
+      })
+      .finally(() => setLoading(false));
+  }
+
+  function loadGroups(sourceToLoad = source) {
     setLoading(true);
-
-    try {
-      const data = await groupsApi.list({
-        source,
-        instance_name:
-          source === "evolution" ? instanceName.trim() || undefined : undefined,
-        search: source === "evolution" ? search.trim() || undefined : undefined,
-      });
-      setGroups(data);
-    } catch (err) {
-      setError(formatApiError(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [instanceName, search, source]);
+    void fetchGroups(sourceToLoad);
+  }
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.replace("/login");
+    // Initial load only (state starts as loading); later loads come from the form.
+    void fetchGroups("database");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleFilter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    loadGroups();
+  }
+
+  async function handleLink(group: EvolutionGroup) {
+    if (!validateGroupStatus(status)) {
+      toast.error("Status deve ser ativo, pendente ou desativado.");
       return;
     }
 
-    queueMicrotask(() => void loadGroups());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
+    setLinkingGroupId(group.id);
 
-  async function handleFilter(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    await loadGroups();
+    try {
+      const linked = await groupsApi.link(group.id, {
+        instance_name: instanceName.trim() || undefined,
+        status,
+      });
+      setSource("database");
+      setLoadedSource("database");
+      setGroups((current) => {
+        const linkedGroups = current.filter(isLinkedGroup);
+        const exists = linkedGroups.some((item) => item.id === linked.id);
+
+        return exists
+          ? linkedGroups.map((item) => (item.id === linked.id ? linked : item))
+          : [linked, ...linkedGroups];
+      });
+      toast.success(`Grupo ${linked.name} salvo.`, {
+        description: `Status: ${groupStatusLabels[linked.status] ?? linked.status}.`,
+      });
+    } catch (err) {
+      toast.error("Não foi possível salvar o grupo.", {
+        description: formatApiError(err),
+      });
+    } finally {
+      setLinkingGroupId(null);
+    }
   }
 
-  // async function handleImportGroups() {
-  //   setError(null);
-  //   setSuccess(null);
-  //
-  //   if (!validateGroupStatus(status)) {
-  //     setError("Status deve ser disabled, active ou pending.");
-  //     return;
-  //   }
-  //
-  //   setImportingGroups(true);
-  //
-  //   try {
-  //     const data = await groupsApi.importAll(
-  //       {
-  //         instance_name: instanceName.trim() || undefined,
-  //         status,
-  //       },
-  //       { search: search.trim() || undefined },
-  //     );
-  //     setSource("database");
-  //     setGroups(data.groups);
-  //     setSuccess(
-  //       `${data.total} grupo(s) processado(s): ${data.created} criado(s), ${data.existing} existente(s).`,
-  //     );
-  //   } catch (err) {
-  //     setError(formatApiError(err));
-  //   } finally {
-  //     setImportingGroups(false);
-  //   }
-  // }
-  //
-  // async function handleResetGroups() {
-  //   setError(null);
-  //   setSuccess(null);
-  //   setResettingGroups(true);
-  //
-  //   try {
-  //     const data = await groupsApi.reset({
-  //       instance_name: instanceName.trim() || undefined,
-  //     });
-  //     setSource("database");
-  //     setGroups(data.groups);
-  //     setSuccess(
-  //       `${data.total} grupo(s) sincronizado(s): ${data.created} criado(s), ${data.updated} atualizado(s), ${data.deleted} removido(s).`,
-  //     );
-  //   } catch (err) {
-  //     setError(formatApiError(err));
-  //   } finally {
-  //     setResettingGroups(false);
-  //   }
-  // }
-
-  const handleLink = useCallback(
-    async (group: EvolutionGroup) => {
-      setError(null);
-      setSuccess(null);
-
-      if (!validateGroupStatus(status)) {
-        setError("Status deve ser disabled, active ou pending.");
-        return;
-      }
-
-      setLinkingGroupId(group.id);
-
-      try {
-        const linked = await groupsApi.link(group.id, {
-          instance_name: instanceName.trim() || undefined,
-          status,
-        });
-        setSource("database");
-        setGroups((current) => {
-          const linkedGroups = current.filter(isLinkedGroup);
-          const exists = linkedGroups.some((item) => item.id === linked.id);
-
-          return exists
-            ? linkedGroups.map((item) => (item.id === linked.id ? linked : item))
-            : [linked, ...linkedGroups];
-        });
-        setSuccess(`Grupo ${linked.name} linkado com status ${linked.status}.`);
-      } catch (err) {
-        setError(formatApiError(err));
-      } finally {
-        setLinkingGroupId(null);
-      }
-    },
-    [instanceName, status],
-  );
-
-  const columns = useMemo<DataTableColumn<GroupRow>[]>(
-    () =>
-      source === "database"
-        ? [
-            {
-              header: "ID",
-              accessor: (group) => (isLinkedGroup(group) ? group.id : "-"),
-              className: "text-center",
+  const columns: DataTableColumn<GroupRow>[] =
+    loadedSource === "database"
+      ? [
+          {
+            header: "Nome",
+            accessor: (group) => <span className="font-medium">{group.name}</span>,
+          },
+          {
+            header: "ID",
+            accessor: (group) => (
+              <span className="font-mono text-xs text-muted-foreground">
+                {isLinkedGroup(group) ? group.id : "—"}
+              </span>
+            ),
+          },
+          {
+            header: "ID externo",
+            accessor: (group) => (
+              <span className="font-mono text-xs text-muted-foreground">
+                {isLinkedGroup(group) ? group.externalId : group.id}
+              </span>
+            ),
+          },
+          {
+            header: "Status",
+            accessor: (group) => {
+              if (!isLinkedGroup(group)) return "—";
+              const display = getGroupStatus(group.status);
+              return <Badge variant={display.variant}>{display.label}</Badge>;
             },
-            {
-              header: "ID externo",
-              accessor: (group) =>
-                isLinkedGroup(group) ? group.externalId : group.id,
-              className: "text-center",
-            },
-            { header: "Nome", accessor: "name", className: "text-center" },
-            {
-              header: "Status",
-              accessor: (group) => (isLinkedGroup(group) ? group.status : "-"),
-              className: "text-center",
-            },
-          ]
-        : [
-            { header: "ID externo", accessor: "id", className: "text-center" },
-            { header: "Nome", accessor: "name", className: "text-center" },
-            {
-              header: "Subject",
-              accessor: (group) => (isLinkedGroup(group) ? "-" : group.subject),
-              className: "text-center",
-            },
-            {
-              header: "Acoes",
-              className: "text-center",
-              accessor: (group) =>
-                isLinkedGroup(group) ? null : (
-                  <Button
-                    disabled={linkingGroupId === group.id}
-                    onClick={() => void handleLink(group)}
-                    variant="secondary"
-                  >
-                    {linkingGroupId === group.id ? "Salvando..." : "Salvar"}
-                  </Button>
-                ),
-            },
-          ],
-    [handleLink, linkingGroupId, source],
-  );
+          },
+        ]
+      : [
+          {
+            header: "Nome",
+            accessor: (group) => <span className="font-medium">{group.name}</span>,
+          },
+          {
+            header: "ID externo",
+            accessor: (group) => (
+              <span className="font-mono text-xs text-muted-foreground">{group.id}</span>
+            ),
+          },
+          {
+            header: "Assunto",
+            accessor: (group) => (isLinkedGroup(group) ? "—" : group.subject),
+          },
+          {
+            header: "Ação",
+            className: "text-right",
+            accessor: (group) =>
+              isLinkedGroup(group) ? null : (
+                <Button
+                  aria-label={`Salvar grupo ${group.name}`}
+                  disabled={linkingGroupId === group.id}
+                  onClick={() => void handleLink(group)}
+                  size="sm"
+                  variant="secondary"
+                >
+                  <Save aria-hidden />
+                  {linkingGroupId === group.id ? "Salvando..." : "Salvar"}
+                </Button>
+              ),
+          },
+        ];
 
   return (
     <>
       <PageHeader
-        description="Liste grupos locais ou consulte diretamente a Evolution API."
+        description="Liste grupos salvos ou consulte diretamente a Evolution API para salvar novos."
         title="Grupos"
       />
 
-      {error ? <Alert tone="error">{error}</Alert> : null}
-      {success ? <Alert tone="success">{success}</Alert> : null}
-
       <Card>
         <form
-          className="grid gap-4 lg:grid-cols-[minmax(120px,0.7fr)_minmax(180px,1fr)_minmax(180px,1fr)_minmax(150px,0.8fr)_auto]"
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]"
           onSubmit={handleFilter}
         >
           <Select
-            label="Source"
+            label="Origem"
             onValueChange={(value) => setSource(value as GroupSource)}
-            options={[
-              { label: "database", value: "database" },
-              { label: "evolution", value: "evolution" },
-            ]}
+            options={sourceOptions}
             value={source}
           />
           <Input
-            label="Instancia"
+            disabled={source !== "evolution"}
+            hint={source !== "evolution" ? "Disponível na Evolution API." : undefined}
+            label="Instância"
             onChange={(event) => setInstanceName(event.target.value)}
             placeholder="minha-instancia"
             value={instanceName}
           />
           <Input
+            disabled={source !== "evolution"}
             label="Busca"
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Nome ou ID do grupo"
+            type="search"
             value={search}
           />
           <Select
             label="Status ao salvar"
             onValueChange={(value) => setStatus(value as GroupStatus)}
-            options={[
-              { label: "pending", value: "pending" },
-              { label: "active", value: "active" },
-              { label: "disabled", value: "disabled" },
-            ]}
+            options={statusOptions}
             value={status}
           />
-          <div className="flex items-end">
-            <Button disabled={loading} type="submit">
+          <div className="flex items-start sm:col-span-2 lg:col-span-1 lg:pt-6">
+            <Button className="w-full lg:w-auto" disabled={loading} type="submit">
+              <Filter aria-hidden />
               {loading ? "Filtrando..." : "Filtrar"}
             </Button>
-            {/* <Button
-              disabled={importingGroups}
-              onClick={() => void handleImportGroups()}
-              type="button"
-              variant="secondary"
-            >
-              {importingGroups ? "Importando..." : "Importar resultado"}
-            </Button> */}
-            {/* <Button
-              disabled={resettingGroups}
-              onClick={() => void handleResetGroups()}
-              type="button"
-              variant="outline"
-            >
-              {resettingGroups ? "Sincronizando..." : "Resetar salvos"}
-            </Button> */}
           </div>
         </form>
       </Card>
@@ -279,7 +232,31 @@ export default function GroupsPage() {
       <DataTable
         columns={columns}
         data={groups}
-        emptyMessage="Nenhum grupo encontrado."
+        emptyState={
+          <EmptyState
+            action={
+              loadedSource === "database" ? (
+                <Button
+                  onClick={() => {
+                    setSource("evolution");
+                    loadGroups("evolution");
+                  }}
+                  size="sm"
+                  variant="secondary"
+                >
+                  Buscar na Evolution API
+                </Button>
+              ) : undefined
+            }
+            description={
+              loadedSource === "database"
+                ? "Busque grupos na Evolution API e salve os que devem receber ofertas."
+                : "Confira o nome da instância ou ajuste a busca."
+            }
+            icon={Users}
+            title="Nenhum grupo encontrado"
+          />
+        }
         getRowKey={(group, index) =>
           String(
             isLinkedGroup(group)
@@ -288,7 +265,7 @@ export default function GroupsPage() {
           )
         }
         loading={loading}
-        loadingMessage="Carregando grupos..."
+        loadingLabel="Carregando grupos..."
       />
     </>
   );

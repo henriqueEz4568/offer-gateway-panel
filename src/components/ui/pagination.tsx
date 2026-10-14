@@ -1,89 +1,61 @@
-import type { AnchorHTMLAttributes, HTMLAttributes } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { ComponentProps } from "react";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "./button";
 
-type PaginationLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
-  isActive?: boolean;
-};
-
-export function Pagination({
-  className = "",
-  ...props
-}: HTMLAttributes<HTMLElement>) {
+export function Pagination({ className, ...props }: ComponentProps<"nav">) {
   return (
     <nav
-      aria-label="pagination"
-      className={`mx-auto flex w-full justify-center ${className}`}
+      aria-label="Paginação"
+      className={cn("mx-auto flex w-full justify-center", className)}
       {...props}
     />
   );
 }
 
-export function PaginationContent({
-  className = "",
-  ...props
-}: HTMLAttributes<HTMLUListElement>) {
-  return (
-    <ul className={`flex flex-row items-center gap-1 ${className}`} {...props} />
-  );
+export function PaginationContent({ className, ...props }: ComponentProps<"ul">) {
+  return <ul className={cn("flex flex-row items-center gap-1", className)} {...props} />;
 }
 
-export function PaginationItem({
-  className = "",
-  ...props
-}: HTMLAttributes<HTMLLIElement>) {
-  return <li className={className} {...props} />;
+export function PaginationItem(props: ComponentProps<"li">) {
+  return <li {...props} />;
 }
 
-export function PaginationLink({
-  className = "",
+type PaginationButtonProps = ComponentProps<"button"> & { isActive?: boolean };
+
+export function PaginationButton({
+  className,
   isActive = false,
   ...props
-}: PaginationLinkProps) {
+}: PaginationButtonProps) {
   return (
-    <a
+    <button
       aria-current={isActive ? "page" : undefined}
-      className={`inline-flex h-10 min-w-10 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors ${
-        isActive
-          ? "border border-zinc-300 bg-white text-zinc-950"
-          : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950"
-      } ${className}`}
+      className={cn(
+        buttonVariants({ variant: isActive ? "outline" : "ghost", size: "sm" }),
+        "min-w-9",
+        className,
+      )}
+      type="button"
       {...props}
     />
   );
 }
 
-export function PaginationPrevious({
-  className = "",
-  ...props
-}: AnchorHTMLAttributes<HTMLAnchorElement>) {
+export function PaginationPrevious(props: PaginationButtonProps) {
   return (
-    <PaginationLink className={`gap-1 ${className}`} {...props}>
-      Anterior
-    </PaginationLink>
+    <PaginationButton aria-label="Página anterior" {...props}>
+      <ChevronLeft aria-hidden />
+      <span className="hidden sm:inline">Anterior</span>
+    </PaginationButton>
   );
 }
 
-export function PaginationNext({
-  className = "",
-  ...props
-}: AnchorHTMLAttributes<HTMLAnchorElement>) {
+export function PaginationNext(props: PaginationButtonProps) {
   return (
-    <PaginationLink className={`gap-1 ${className}`} {...props}>
-      Proxima
-    </PaginationLink>
-  );
-}
-
-export function PaginationEllipsis({
-  className = "",
-  ...props
-}: HTMLAttributes<HTMLSpanElement>) {
-  return (
-    <span
-      aria-hidden
-      className={`flex h-10 w-10 items-center justify-center text-sm text-zinc-500 ${className}`}
-      {...props}
-    >
-      ...
-    </span>
+    <PaginationButton aria-label="Próxima página" {...props}>
+      <span className="hidden sm:inline">Próxima</span>
+      <ChevronRight aria-hidden />
+    </PaginationButton>
   );
 }

@@ -5,7 +5,7 @@ const phoneRegex = /^\d{10,15}$/;
 
 export function required(value: string, label: string) {
   if (!value.trim()) {
-    return `${label} e obrigatorio.`;
+    return `${label} é obrigatório.`;
   }
 
   return null;
@@ -13,7 +13,7 @@ export function required(value: string, label: string) {
 
 export function validateEmail(value: string) {
   if (!emailRegex.test(value.trim())) {
-    return "Informe um email valido.";
+    return "Informe um e-mail válido.";
   }
 
   return null;
@@ -27,7 +27,7 @@ export function validatePositiveInteger(value: string, label: string) {
   const number = Number(value);
 
   if (!Number.isInteger(number) || number <= 0) {
-    return `${label} deve ser um numero inteiro positivo.`;
+    return `${label} deve ser um número inteiro positivo.`;
   }
 
   return null;
@@ -35,7 +35,7 @@ export function validatePositiveInteger(value: string, label: string) {
 
 export function validateBrazilPhone(value: string) {
   if (!phoneRegex.test(value.trim())) {
-    return "Informe o destino apenas com numeros, incluindo DDI e DDD.";
+    return "Informe o destino apenas com números, incluindo DDI e DDD.";
   }
 
   return null;
@@ -65,5 +65,5 @@ export function formatApiError(error: unknown) {
     }
   }
 
-  return "Nao foi possivel concluir a operacao.";
+  return "Não foi possível concluir a operação.";
 }
