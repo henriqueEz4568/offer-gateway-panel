@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { NextRequest } from "next/server";
+import { getApiUrl } from "@/lib/env";
 
 type ProxyContext = {
   params: Promise<{ path: string[] }>;
@@ -11,12 +12,6 @@ const requestHeaders = [
   "content-type",
   "apikey",
 ];
-
-function getBackendUrl() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
-
-  return apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
-}
 
 function buildHeaders(request: NextRequest) {
   const headers: Record<string, string> = {};
@@ -44,7 +39,7 @@ async function proxy(request: NextRequest, context: ProxyContext) {
       : await request.arrayBuffer();
 
   const response = await axios.request<ArrayBuffer>({
-    baseURL: getBackendUrl(),
+    baseURL: getApiUrl(),
     data: body,
     headers: buildHeaders(request),
     method: request.method,
