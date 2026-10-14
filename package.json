@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
+    "dev:release": "cross-env NEXT_PUBLIC_APP_ENV=release next dev",
+    "start:release": "cross-env NEXT_PUBLIC_APP_ENV=release next build --webpack && cross-env NEXT_PUBLIC_APP_ENV=release next start",
     "lint": "eslint"
   },
   "dependencies": {
@@ -30,6 +32,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
