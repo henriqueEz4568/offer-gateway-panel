@@ -83,7 +83,6 @@ export function sanitizeAppName(value: unknown) {
   if (typeof value !== "string") return undefined;
 
   // Strip control characters; React escapes the rest when rendering as text.
-  // eslint-disable-next-line no-control-regex
   const name = value.replace(/[\u0000-\u001f\u007f]/g, "").trim();
 
   return name ? name.slice(0, APP_NAME_MAX_LENGTH).trim() : undefined;
