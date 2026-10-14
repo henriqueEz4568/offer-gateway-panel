@@ -8,6 +8,8 @@ import { formatApiError, required, validateEmail } from "@/lib/validation";
 import { Alert, Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isMock } from "@/mock";
+import { MockBanner } from "@/mock/mock-banner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,6 +51,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 md:px-4">
+      {isMock() ? <MockBanner /> : null}
       <Card className="flex min-h-screen w-full flex-col justify-center rounded-none border-none bg-[#1E293B] p-10 md:min-h-0 md:w-1/3 md:rounded-xl md:border lg:w-1/4">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-slate-50">Entrar</h1>
