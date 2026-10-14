@@ -1,4 +1,5 @@
 import axios from "axios";
+import { isMock, mockAdapter } from "@/mock";
 import { getToken, logout } from "./auth";
 import type {
   EvolutionGroup,
@@ -14,7 +15,7 @@ import type {
 } from "./types";
 
 function buildBaseUrl() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
   const baseUrl = apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
 
   if (
@@ -30,6 +31,7 @@ function buildBaseUrl() {
 
 function createInstance() {
   return axios.create({
+    adapter: isMock() ? mockAdapter : undefined,
     baseURL: buildBaseUrl(),
     headers: {
       "Content-Type": "application/json",
