@@ -4,27 +4,6 @@ Painel administrativo do **Offer Gateway**: lista ofertas de marketplaces (ex.: 
 
 O tema é **white-label**: as cores primária e secundária, o nome e o logo vêm da API (`GET /theme`), com padrão preto e branco quando ela não responde.
 
-| Claro | Escuro |
-| --- | --- |
-| ![Ofertas no modo claro](docs/screenshots/light-offer.png) | ![Ofertas no modo escuro](docs/screenshots/dark-offer.png) |
-
-Com a API retornando `{ "primary": "#2563eb", "secondary": "#f59e0b", "appName": "Acme Ofertas" }`, sem alterar código:
-
-| Claro | Escuro |
-| --- | --- |
-| ![Tema customizado no modo claro](docs/screenshots/custom-light-offer.png) | ![Tema customizado no modo escuro](docs/screenshots/custom-dark-offer.png) |
-
-<details>
-<summary>Mais telas (login, instâncias, mobile)</summary>
-
-| | |
-| --- | --- |
-| ![Login](docs/screenshots/light-login.png) | ![Login com tema customizado](docs/screenshots/custom-light-login.png) |
-| ![Instâncias](docs/screenshots/light-instances.png) | ![Instâncias no escuro](docs/screenshots/dark-instances.png) |
-| ![Ofertas no mobile](docs/screenshots/mobile-offer.png) | ![Grupos no mobile](docs/screenshots/mobile-groups.png) |
-
-</details>
-
 ## Funcionalidades
 
 - **Ofertas**: filtros por provedor, ID e busca; miniatura, preço, comissão e valor a receber; envio por linha ou pelo formulário para um grupo salvo; paginação.
