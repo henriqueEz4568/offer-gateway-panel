@@ -15,7 +15,7 @@ import {
   readableForeground,
   resolveTheme,
   themeToCssVariables,
-} from "./theme";
+} from "@/lib/theme";
 
 describe("isHexColor", () => {
   it.each(["#000000", "#FFFFFF", "#2563eb", "#aBcDeF"])("accepts %s", (value) => {
