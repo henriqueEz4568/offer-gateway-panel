@@ -37,7 +37,7 @@ export function TableRow({ className, ...props }: ComponentProps<"tr">) {
 
 export function TableHead({ className, ...props }: ComponentProps<"th">) {
   return (
-    <th className={cn("px-4 py-3 font-semibold", className)} scope="col" {...props} />
+    <th className={cn("whitespace-nowrap px-4 py-3 font-semibold", className)} scope="col" {...props} />
   );
 }
 
