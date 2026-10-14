@@ -1,55 +1,46 @@
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentProps } from "react";
+import { cn } from "@/lib/utils";
 
-export function Table({
-  className = "",
-  ...props
-}: ComponentPropsWithoutRef<"table">) {
+export function Table({ className, ...props }: ComponentProps<"table">) {
   return (
     <table
-      className={`w-full min-w-[720px] border-collapse text-left text-sm ${className}`}
+      className={cn("w-full min-w-[720px] border-collapse text-left text-sm", className)}
       {...props}
     />
   );
 }
 
-export function TableHeader({
-  className = "",
-  ...props
-}: ComponentPropsWithoutRef<"thead">) {
+export function TableHeader({ className, ...props }: ComponentProps<"thead">) {
   return (
     <thead
-      className={`bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 ${className}`}
+      className={cn(
+        "bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground",
+        className,
+      )}
       {...props}
     />
   );
 }
 
-export function TableBody({
-  className = "",
-  ...props
-}: ComponentPropsWithoutRef<"tbody">) {
-  return <tbody className={`divide-y divide-zinc-200 ${className}`} {...props} />;
+export function TableBody({ className, ...props }: ComponentProps<"tbody">) {
+  return <tbody className={cn("divide-y divide-border", className)} {...props} />;
 }
 
-export function TableRow({
-  className = "",
-  ...props
-}: ComponentPropsWithoutRef<"tr">) {
-  return <tr className={`align-middle text-zinc-700 ${className}`} {...props} />;
-}
-
-export function TableHead({
-  className = "",
-  ...props
-}: ComponentPropsWithoutRef<"th">) {
+export function TableRow({ className, ...props }: ComponentProps<"tr">) {
   return (
-    <th className={`px-4 py-3 font-semibold ${className}`} {...props} />
+    <tr
+      className={cn("align-middle transition-colors hover:bg-muted/40", className)}
+      {...props}
+    />
   );
 }
 
-export function TableCell({
-  className = "",
-  ...props
-}: ComponentPropsWithoutRef<"td">) {
-  return <td className={`px-4 py-3 align-middle ${className}`} {...props} />;
+export function TableHead({ className, ...props }: ComponentProps<"th">) {
+  return (
+    <th className={cn("px-4 py-3 font-semibold", className)} scope="col" {...props} />
+  );
+}
+
+export function TableCell({ className, ...props }: ComponentProps<"td">) {
+  return <td className={cn("px-4 py-3 align-middle", className)} {...props} />;
 }
