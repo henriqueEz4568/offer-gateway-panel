@@ -1,5 +1,4 @@
-import * as LabelPrimitive from "@radix-ui/react-label";
-import * as SelectPrimitive from "@radix-ui/react-select";
+import { Label as LabelPrimitive, Select as SelectPrimitive } from "radix-ui";
 import type { InputHTMLAttributes } from "react";
 
 type FieldProps = {
