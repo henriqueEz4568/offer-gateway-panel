@@ -39,20 +39,23 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 No modo release **nenhuma** chamada vai para a API real: o axios (`src/lib/api.ts`) usa um adapter que responde com dados fixos em memória. Serve para qualquer pessoa testar o painel sem backend. Todo o código fica em `src/mock/`.
 
-> **Atenção:** nunca defina `NEXT_PUBLIC_APP_ENV=release` no ambiente de produção. Nesse modo o login aceita **qualquer** e-mail e senha (bypass de autenticação).
+> **Atenção:** nunca defina `NODE_ENV=release` no ambiente de produção. Nesse modo o login aceita **qualquer** e-mail e senha (bypass de autenticação).
 
 ### Como ligar
 
+Coloque `NODE_ENV=release` no `.env` (veja `.env.example`) e rode `yarn dev`, ou use os scripts:
+
 ```bash
-yarn dev:release     # next dev com NEXT_PUBLIC_APP_ENV=release
-yarn start:release   # build + start com NEXT_PUBLIC_APP_ENV=release
+yarn dev:release     # next dev com NODE_ENV=release
+yarn start:release   # build + start com NODE_ENV=release
 ```
 
-Não é preciso definir `NEXT_PUBLIC_API_URL`. Também dá para descomentar `NEXT_PUBLIC_APP_ENV=release` no `.env.local` (veja `.env.example`).
+Não é preciso definir `NEXT_PUBLIC_API_URL`.
 
-- O modo só liga com o valor exato `release` (`isMock()` em `src/mock/index.ts`); qualquer outro valor, ou a variável ausente, mantém o comportamento normal.
-- Variáveis `NEXT_PUBLIC_*` são embutidas no bundle **no momento do build**. Por isso `start:release` refaz o build com a variável; um build feito sem ela não liga o modo release.
-- `NODE_ENV=release` também é aceito por `isMock()`, mas não é confiável: a documentação do Next (`environment-variables.md`) diz que os valores permitidos para `NODE_ENV` são `production`, `development` e `test`, e o Next substitui `process.env.NODE_ENV` no código do navegador por `development` (no `next dev`) ou `production` (no build). Ou seja, com `NODE_ENV=release` o código do cliente nunca enxerga `release`, e o Next ainda avisa sobre o valor fora do padrão. Use `NEXT_PUBLIC_APP_ENV`.
+- O modo só liga com o valor exato `release`; qualquer outro valor, ou a variável ausente, mantém o comportamento normal.
+- Como funciona: o Next define `NODE_ENV` (`development` no `next dev`, `production` nos outros comandos) **antes** de ler o `.env`, então um `NODE_ENV=release` no `.env` não chega em `process.env`. Além disso, no código do navegador o Next sempre troca `process.env.NODE_ENV` por `development` ou `production`. Por isso o `next.config.ts` lê o `NODE_ENV` do ambiente e o texto dos arquivos `.env` e, se for `release`, publica `NEXT_PUBLIC_APP_ENV=release` para o navegador. É essa variável que `isMock()` (`src/mock/index.ts`) verifica.
+- A documentação do Next (`environment-variables.md`) diz que os valores permitidos para `NODE_ENV` são `production`, `development` e `test`. Com `NODE_ENV=release` na linha de comando o Next mostra o aviso `non-standard "NODE_ENV"`; é esperado nesse modo.
+- O valor é embutido no bundle **no momento do build**. Por isso `start:release` refaz o build; um build feito sem a variável não liga o modo release.
 
 ### O que é mockado
 
