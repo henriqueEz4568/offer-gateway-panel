@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
 import { logout } from "@/lib/auth";
+import { isMock } from "@/mock";
+import { MockBanner } from "@/mock/mock-banner";
 
 const navItems = [
   { href: "/offer", label: "Offers" },
@@ -53,6 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
         {children}
       </main>
+      {isMock() ? <MockBanner /> : null}
     </div>
   );
 }
