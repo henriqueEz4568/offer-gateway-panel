@@ -1,6 +1,7 @@
 import axios from "axios";
-import { isMock, mockAdapter } from "@/mock";
 import { getToken, logout } from "./auth";
+import { isMock, mockAdapter } from "@/mock";
+import { getApiUrl } from "./env";
 import type {
   EvolutionGroup,
   GroupStatus,
@@ -15,8 +16,12 @@ import type {
 } from "./types";
 
 function buildBaseUrl() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
-  const baseUrl = apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
+  // Em modo release nada vai para a API, então a URL não é obrigatória.
+  if (isMock()) {
+    return "";
+  }
+
+  const baseUrl = getApiUrl();
 
   if (
     typeof window !== "undefined" &&

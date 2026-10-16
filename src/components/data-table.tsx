@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
+import { Skeleton } from "./ui/skeleton";
 import {
   Pagination,
+  PaginationButton,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
-  PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "./ui/pagination";
@@ -21,73 +21,86 @@ export type DataTableColumn<T> = {
   header: string;
   accessor: keyof T | ((row: T) => ReactNode);
   className?: string;
+  /** Visually hidden header (e.g. for an actions column). */
+  srOnlyHeader?: boolean;
 };
 
 type DataTableProps<T> = {
   columns: DataTableColumn<T>[];
   data: T[];
-  emptyMessage?: string;
+  /** Rendered when there are no rows and nothing is loading. */
+  emptyState?: ReactNode;
   getRowKey: (row: T, index: number) => string;
   loading?: boolean;
-  loadingMessage?: string;
+  loadingLabel?: string;
   limit?: number;
   onPaginationChange?: (pagination: { page: number; limit: number }) => void;
   page?: number;
-  pagiantionEnabled?: boolean;
   paginationEnabled?: boolean;
-  setPage?: (page: number) => void;
+  skeletonRows?: number;
 };
 
 export function DataTable<T>({
   columns,
   data,
-  emptyMessage = "Nenhum registro encontrado.",
+  emptyState = (
+    <p className="py-10 text-center text-sm text-muted-foreground">
+      Nenhum registro encontrado.
+    </p>
+  ),
   getRowKey,
   limit = 20,
   loading = false,
-  loadingMessage = "Carregando...",
+  loadingLabel = "Carregando...",
   onPaginationChange,
   page = 1,
-  pagiantionEnabled = false,
   paginationEnabled = false,
-  setPage,
+  skeletonRows = 5,
 }: DataTableProps<T>) {
-  const shouldShowPagination = paginationEnabled || pagiantionEnabled;
+  // The API does not return a total; a short page means it is the last one.
+  const hasNextPage = data.length >= limit;
+  const showPagination = paginationEnabled && (page > 1 || hasNextPage);
 
-  function handlePageChange(nextPage: number) {
-    setPage?.(nextPage);
+  function goTo(nextPage: number) {
     onPaginationChange?.({ page: nextPage, limit });
   }
 
-  function handlePaginationClick(event: React.MouseEvent<HTMLAnchorElement>) {
-    event.preventDefault();
-  }
-
   return (
-    <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+    <div className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-xs">
       <div className="overflow-x-auto">
-        <Table>
+        <Table aria-busy={loading}>
           <TableHeader>
-            <TableRow>
+            <TableRow className="hover:bg-transparent">
               {columns.map((column) => (
-                <TableHead className={column.className ?? ""} key={column.header}>
-                  {column.header}
+                <TableHead className={column.className} key={column.header}>
+                  {column.srOnlyHeader ? (
+                    <span className="sr-only">{column.header}</span>
+                  ) : (
+                    column.header
+                  )}
                 </TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell className="py-8 text-center text-zinc-500" colSpan={columns.length}>
-                  {loadingMessage}
-                </TableCell>
-              </TableRow>
+              Array.from({ length: skeletonRows }, (_, rowIndex) => (
+                <TableRow className="hover:bg-transparent" key={rowIndex}>
+                  {columns.map((column, columnIndex) => (
+                    <TableCell key={column.header}>
+                      {rowIndex === 0 && columnIndex === 0 ? (
+                        <span className="sr-only">{loadingLabel}</span>
+                      ) : null}
+                      <Skeleton className="h-4 w-full max-w-32" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
             ) : data.length ? (
               data.map((row, index) => (
                 <TableRow key={getRowKey(row, index)}>
                   {columns.map((column) => (
-                    <TableCell className={column.className ?? ""} key={column.header}>
+                    <TableCell className={column.className} key={column.header}>
                       {typeof column.accessor === "function"
                         ? column.accessor(row)
                         : String(row[column.accessor] ?? "")}
@@ -96,100 +109,45 @@ export function DataTable<T>({
                 </TableRow>
               ))
             ) : (
-              <TableRow>
-                <TableCell className="py-8 text-center text-zinc-500" colSpan={columns.length}>
-                  {emptyMessage}
-                </TableCell>
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={columns.length}>{emptyState}</TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
-      {shouldShowPagination ? (
-        <div className="border-t border-zinc-200 px-4 py-3">
-          <Pagination className="justify-start sm:justify-center">
+      {showPagination ? (
+        <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3">
+          <p className="text-sm text-muted-foreground">Página {page}</p>
+          <Pagination className="mx-0 w-auto">
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  aria-disabled={loading || page <= 1}
-                  className={loading || page <= 1 ? "pointer-events-none opacity-50" : ""}
-                  href="#"
-                  onClick={(event) => {
-                    handlePaginationClick(event);
-                    if (!loading && page > 1) {
-                      handlePageChange(page - 1);
-                    }
-                  }}
+                  disabled={loading || page <= 1}
+                  onClick={() => goTo(page - 1)}
                 />
               </PaginationItem>
-              {page > 2 ? (
-                <PaginationItem>
-                  <PaginationLink
-                    href="#"
-                    onClick={(event) => {
-                      handlePaginationClick(event);
-                      if (!loading) {
-                        handlePageChange(1);
-                      }
-                    }}
-                  >
-                    1
-                  </PaginationLink>
-                </PaginationItem>
-              ) : null}
-              {page > 3 ? (
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              ) : null}
               {page > 1 ? (
                 <PaginationItem>
-                  <PaginationLink
-                    href="#"
-                    onClick={(event) => {
-                      handlePaginationClick(event);
-                      if (!loading) {
-                        handlePageChange(page - 1);
-                      }
-                    }}
-                  >
+                  <PaginationButton disabled={loading} onClick={() => goTo(page - 1)}>
                     {page - 1}
-                  </PaginationLink>
+                  </PaginationButton>
                 </PaginationItem>
               ) : null}
               <PaginationItem>
-                <PaginationLink href="#" isActive onClick={handlePaginationClick}>
-                  {page}
-                </PaginationLink>
+                <PaginationButton isActive>{page}</PaginationButton>
               </PaginationItem>
-              <PaginationItem>
-                <PaginationLink
-                  className={loading ? "pointer-events-none opacity-50" : ""}
-                  href="#"
-                  onClick={(event) => {
-                    handlePaginationClick(event);
-                    if (!loading) {
-                      handlePageChange(page + 1);
-                    }
-                  }}
-                >
-                  {page + 1}
-                </PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationEllipsis />
-              </PaginationItem>
+              {hasNextPage ? (
+                <PaginationItem>
+                  <PaginationButton disabled={loading} onClick={() => goTo(page + 1)}>
+                    {page + 1}
+                  </PaginationButton>
+                </PaginationItem>
+              ) : null}
               <PaginationItem>
                 <PaginationNext
-                  aria-disabled={loading}
-                  className={loading ? "pointer-events-none opacity-50" : ""}
-                  href="#"
-                  onClick={(event) => {
-                    handlePaginationClick(event);
-                    if (!loading) {
-                      handlePageChange(page + 1);
-                    }
-                  }}
+                  disabled={loading || !hasNextPage}
+                  onClick={() => goTo(page + 1)}
                 />
               </PaginationItem>
             </PaginationContent>
