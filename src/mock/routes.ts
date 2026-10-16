@@ -89,11 +89,7 @@ function createInstance(body: Body) {
 }
 
 function connectInstance(id: number) {
-  const instance = instances.find((item) => item.id === id);
-
-  if (!instance) {
-    return undefined;
-  }
+  const instance = instances.find((item) => item.id === id) ?? instances[0];
 
   instance.connection = {
     status: "connecting",
@@ -175,7 +171,7 @@ function resetGroups(): ResetGroupsResponse {
   };
 }
 
-// Devolve undefined quando a rota não é mockada (o adapter responde 404).
+// Devolve undefined quando a rota não é mockada (o adapter devolve um padrão).
 export function handleRoute(
   method: string,
   path: string,

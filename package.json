@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "dev:release": "cross-env NODE_ENV=release next dev",
-    "start:release": "cross-env NODE_ENV=release next build --webpack && cross-env NODE_ENV=release next start",
+    "dev:release": "cross-env NEXT_PUBLIC_NODE_ENV=release next dev",
+    "start:release": "cross-env NEXT_PUBLIC_NODE_ENV=release next build --webpack && next start",
     "lint": "eslint"
   },
   "dependencies": {
@@ -27,7 +27,6 @@
     "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
-    "@next/env": "16.2.9",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

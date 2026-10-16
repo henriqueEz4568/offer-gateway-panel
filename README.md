@@ -39,23 +39,22 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 No modo release **nenhuma** chamada vai para a API real: o axios (`src/lib/api.ts`) usa um adapter que responde com dados fixos em memória. Serve para qualquer pessoa testar o painel sem backend. Todo o código fica em `src/mock/`.
 
-> **Atenção:** nunca defina `NODE_ENV=release` no ambiente de produção. Nesse modo o login aceita **qualquer** e-mail e senha (bypass de autenticação).
+> **Atenção:** nunca defina `NEXT_PUBLIC_NODE_ENV=release` no ambiente de produção. Nesse modo o login aceita **qualquer** e-mail e senha (bypass de autenticação).
 
 ### Como ligar
 
-Coloque `NODE_ENV=release` no `.env` (veja `.env.example`) e rode `yarn dev`, ou use os scripts:
+Coloque `NEXT_PUBLIC_NODE_ENV=release` no `.env` (veja `.env.example`) e rode `yarn dev`, ou use os scripts:
 
 ```bash
-yarn dev:release     # next dev com NODE_ENV=release
-yarn start:release   # build + start com NODE_ENV=release
+yarn dev:release     # next dev com NEXT_PUBLIC_NODE_ENV=release
+yarn start:release   # build + start com NEXT_PUBLIC_NODE_ENV=release
 ```
 
 Não é preciso definir `NEXT_PUBLIC_API_URL`.
 
-- O modo só liga com o valor exato `release`; qualquer outro valor, ou a variável ausente, mantém o comportamento normal.
-- Como funciona: o Next define `NODE_ENV` (`development` no `next dev`, `production` nos outros comandos) **antes** de ler o `.env`, então um `NODE_ENV=release` no `.env` não chega em `process.env`. Além disso, no código do navegador o Next sempre troca `process.env.NODE_ENV` por `development` ou `production`. Por isso o `next.config.ts` lê o `NODE_ENV` do ambiente e o texto dos arquivos `.env` e, se for `release`, publica `NEXT_PUBLIC_APP_ENV=release` para o navegador. É essa variável que `isMock()` (`src/mock/index.ts`) verifica.
-- A documentação do Next (`environment-variables.md`) diz que os valores permitidos para `NODE_ENV` são `production`, `development` e `test`. Com `NODE_ENV=release` na linha de comando o Next mostra o aviso `non-standard "NODE_ENV"`; é esperado nesse modo.
-- O valor é embutido no bundle **no momento do build**. Por isso `start:release` refaz o build; um build feito sem a variável não liga o modo release.
+- `isMock()` (`src/mock/index.ts`) verifica só `NEXT_PUBLIC_NODE_ENV === "release"`. Sem essa variável (por exemplo, em produção com `NODE_ENV=production`), o painel chama a API normalmente.
+- O `NODE_ENV` não é usado para ligar o mock: o Next só aceita `production`, `development` e `test` (`environment-variables.md`), define o valor antes de ler o `.env` e, no código do navegador, sempre o troca por `development` ou `production`. Variáveis com prefixo `NEXT_PUBLIC_` chegam ao navegador normalmente.
+- O valor é embutido no bundle **no momento do build**. Por isso `start:release` refaz o build com a variável; um build feito sem ela não liga o modo release.
 
 ### O que é mockado
 
@@ -71,7 +70,7 @@ Não é preciso definir `NEXT_PUBLIC_API_URL`.
 | `GET /evolution/groups` | `source=database` devolve os grupos linkados, `source=evolution` os grupos da Evolution; respeita `search` |
 | `POST /evolution/groups/import`, `/reset`, `/:groupId/link` | respostas no formato de `src/lib/types.ts`; `link` cria ou atualiza o grupo linkado |
 
-Seeds: 2 instâncias (uma `open`, uma `close`), 6 grupos da Evolution (3 já linkados) e 12 ofertas. Rotas não mapeadas respondem 404 `Rota não mockada: METHOD /url`. A rota `/api/proxy` responde 404 nesse modo.
+Seeds: 2 instâncias (uma `open`, uma `close`), 6 grupos da Evolution (3 já linkados) e 12 ofertas. Rotas não mapeadas também respondem com sucesso: `GET` devolve `[]` e os outros métodos `{}`. A rota `/api/proxy` responde 404 nesse modo.
 
 ### Estado
 
