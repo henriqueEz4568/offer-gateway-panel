@@ -3,6 +3,7 @@
 import { Check, ChevronDown } from "lucide-react";
 import { Label as LabelPrimitive, Select as SelectPrimitive } from "radix-ui";
 import { useId, type ComponentProps, type ReactNode } from "react";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 type FieldProps = {
@@ -128,9 +129,10 @@ export function Select({
   label,
   onValueChange,
   options,
-  placeholder = "Selecione",
+  placeholder,
   value,
 }: SelectProps) {
+  const { t } = useI18n();
   const { id, errorId, hintId, describedBy } = useFieldIds(error, hint);
 
   return (
@@ -159,7 +161,7 @@ export function Select({
           id={id}
         >
           <span className="truncate">
-            <SelectPrimitive.Value placeholder={placeholder} />
+            <SelectPrimitive.Value placeholder={placeholder ?? t.common.select} />
           </span>
           <SelectPrimitive.Icon asChild>
             <ChevronDown aria-hidden className="size-4 shrink-0 opacity-60" />

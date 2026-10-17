@@ -17,17 +17,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
 import { ConfirmationModal, Modal } from "@/components/ui/modal";
 import { toast } from "@/components/ui/toaster";
+import { useI18n } from "@/i18n/provider";
 import { instancesApi } from "@/lib/api";
 import { getInstanceStatus } from "@/lib/status";
 import type { Instance } from "@/lib/types";
 import { formatApiError, validatePositiveInteger } from "@/lib/validation";
 
 type InstanceSource = "database" | "evolution";
-
-const sourceOptions = [
-  { label: "Banco de dados", value: "database" },
-  { label: "Evolution API", value: "evolution" },
-];
 
 function formatQrCodeSource(base64: string) {
   return base64.startsWith("data:")
@@ -36,6 +32,11 @@ function formatQrCodeSource(base64: string) {
 }
 
 export default function InstancesPage() {
+  const { t } = useI18n();
+  const sourceOptions = [
+    { label: t.common.sourceDatabase, value: "database" },
+    { label: t.common.sourceEvolution, value: "evolution" },
+  ];
   const [instances, setInstances] = useState<Instance[]>([]);
   const [source, setSource] = useState<InstanceSource>("database");
   const [id, setId] = useState("");
@@ -63,8 +64,8 @@ export default function InstancesPage() {
       })
       .then(setInstances)
       .catch((err) => {
-        toast.error("Não foi possível carregar as instâncias.", {
-          description: formatApiError(err),
+        toast.error(t.instances.loadError, {
+          description: formatApiError(err, t.validation.apiFallback),
         });
       })
       .finally(() => setLoading(false));
@@ -79,7 +80,7 @@ export default function InstancesPage() {
   function handleFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const validationError = validatePositiveInteger(id, "ID");
+    const validationError = validatePositiveInteger(id, t.common.id, t.validation);
     setIdError(validationError);
 
     if (validationError) return;
@@ -106,10 +107,10 @@ export default function InstancesPage() {
       setQrCode(connected.connection?.base64 ?? null);
       setPairingCode(connected.connection?.pairingCode ?? null);
       setQrInstanceName(connected.name);
-      toast.success(`Conexão solicitada para ${connected.name}.`);
+      toast.success(t.instances.connectRequested(connected.name));
     } catch (err) {
-      toast.error("Não foi possível conectar a instância.", {
-        description: formatApiError(err),
+      toast.error(t.instances.connectError, {
+        description: formatApiError(err, t.validation.apiFallback),
       });
     } finally {
       setConnectingId(null);
@@ -128,11 +129,11 @@ export default function InstancesPage() {
       setInstances((current) =>
         current.filter((instance) => instance.id !== instanceToDelete.id),
       );
-      toast.success(`Instância ${instanceToDelete.name} excluída.`);
+      toast.success(t.instances.deleted(instanceToDelete.name));
       setInstanceToDelete(null);
     } catch (err) {
-      toast.error("Não foi possível excluir a instância.", {
-        description: formatApiError(err),
+      toast.error(t.instances.deleteError, {
+        description: formatApiError(err, t.validation.apiFallback),
       });
     } finally {
       setDeletingId(null);
@@ -141,11 +142,11 @@ export default function InstancesPage() {
 
   const columns: DataTableColumn<Instance>[] = [
     {
-      header: "Nome",
+      header: t.common.name,
       accessor: (instance) => <span className="font-medium">{instance.name}</span>,
     },
     {
-      header: "ID",
+      header: t.common.id,
       accessor: (instance) => (
         <span className="font-mono text-xs text-muted-foreground">
           {instance.id ?? "—"}
@@ -153,36 +154,36 @@ export default function InstancesPage() {
       ),
     },
     {
-      header: "ID externo",
+      header: t.common.externalId,
       accessor: (instance) => (
         <span className="font-mono text-xs text-muted-foreground">
           {instance.externalId ?? "—"}
         </span>
       ),
     },
-    { header: "Tipo", accessor: (instance) => instance.type ?? "—" },
+    { header: t.instances.type, accessor: (instance) => instance.type ?? "—" },
     {
-      header: "Número",
+      header: t.instances.number,
       accessor: (instance) => (
         <span className="tabular-nums">{instance.number ?? "—"}</span>
       ),
     },
     {
-      header: "Status",
+      header: t.common.status,
       accessor: (instance) => {
-        const status = getInstanceStatus(instance.connection?.status);
+        const status = getInstanceStatus(instance.connection?.status, t.status.instance);
         return <Badge variant={status.variant}>{status.label}</Badge>;
       },
     },
     {
-      header: "Ações",
+      header: t.common.actions,
       className: "text-right",
       srOnlyHeader: true,
       accessor: (instance) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              aria-label={`Ações da instância ${instance.name}`}
+              aria-label={t.instances.actionsAria(instance.name)}
               disabled={
                 connectingId === instance.id || deletingId === instance.id
               }
@@ -195,14 +196,14 @@ export default function InstancesPage() {
           <DropdownMenuContent>
             <DropdownMenuItem onSelect={() => void handleConnect(instance)}>
               <Plug aria-hidden />
-              Conectar
+              {t.instances.connect}
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => setInstanceToDelete(instance)}
               variant="destructive"
             >
               <Trash2 aria-hidden />
-              Excluir
+              {t.instances.delete}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -217,12 +218,12 @@ export default function InstancesPage() {
           <Button asChild>
             <Link href="/instances/create">
               <Plus aria-hidden />
-              Nova instância
+              {t.instances.newInstance}
             </Link>
           </Button>
         }
-        description="Liste instâncias locais ou consulte diretamente a Evolution API."
-        title="Instâncias"
+        description={t.instances.description}
+        title={t.instances.title}
       />
 
       <Card>
@@ -231,7 +232,7 @@ export default function InstancesPage() {
           onSubmit={handleFilter}
         >
           <Select
-            label="Origem"
+            label={t.common.source}
             onValueChange={(value) => setSource(value as InstanceSource)}
             options={sourceOptions}
             value={source}
@@ -239,27 +240,27 @@ export default function InstancesPage() {
           <Input
             error={idError}
             inputMode="numeric"
-            label="ID"
+            label={t.common.id}
             onChange={(event) => setId(event.target.value)}
             placeholder="10"
             value={id}
           />
           <Input
-            label="ID externo"
+            label={t.common.externalId}
             onChange={(event) => setExternalId(event.target.value)}
             placeholder="instance-id"
             value={externalId}
           />
           <Input
-            label="Nome"
+            label={t.common.name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="minha-instancia"
+            placeholder={t.instances.namePlaceholder}
             value={name}
           />
           <div className="flex items-start sm:col-span-2 lg:col-span-1 lg:pt-6">
             <Button className="w-full lg:w-auto" disabled={loading} type="submit">
               <Filter aria-hidden />
-              {loading ? "Filtrando..." : "Filtrar"}
+              {loading ? t.common.filtering : t.common.filter}
             </Button>
           </div>
         </form>
@@ -274,41 +275,41 @@ export default function InstancesPage() {
               <Button asChild size="sm">
                 <Link href="/instances/create">
                   <Plus aria-hidden />
-                  Nova instância
+                  {t.instances.newInstance}
                 </Link>
               </Button>
             }
-            description="Crie uma instância para começar a enviar ofertas pelo WhatsApp."
+            description={t.instances.emptyDescription}
             icon={Smartphone}
-            title="Nenhuma instância encontrada"
+            title={t.instances.emptyTitle}
           />
         }
         getRowKey={(instance, index) =>
           String(instance.id ?? instance.externalId ?? instance.name ?? index)
         }
         loading={loading}
-        loadingLabel="Carregando instâncias..."
+        loadingLabel={t.instances.loadingInstances}
       />
 
       <Modal
-        description={`Escaneie o QR code ou use o pairing code no WhatsApp para conectar ${qrInstanceName}.`}
+        description={t.instances.connectDescription(qrInstanceName)}
         footer={
           <Button onClick={closeConnectionModal} type="button" variant="secondary">
-            Fechar
+            {t.common.close}
           </Button>
         }
         onOpenChange={(open) => {
           if (!open) closeConnectionModal();
         }}
         open={Boolean(qrCode || pairingCode)}
-        title="Conectar instância"
+        title={t.instances.connectTitle}
       >
         <div className="grid gap-4">
           {qrCode ? (
             <div className="mx-auto rounded-lg bg-qr-background p-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                alt={`QR code da instância ${qrInstanceName}`}
+                alt={t.instances.qrAlt(qrInstanceName)}
                 className="size-64 object-contain [image-rendering:pixelated]"
                 height={256}
                 src={formatQrCodeSource(qrCode)}
@@ -319,7 +320,7 @@ export default function InstancesPage() {
           {pairingCode ? (
             <div className="rounded-md border border-border bg-muted p-4 text-center">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Pairing code
+                {t.instances.pairingCode}
               </p>
               <p className="mt-2 break-all font-mono text-2xl font-semibold tracking-widest">
                 {pairingCode}
@@ -330,17 +331,17 @@ export default function InstancesPage() {
       </Modal>
 
       <ConfirmationModal
-        confirmLabel="Excluir"
+        confirmLabel={t.instances.delete}
         description={
           instanceToDelete
-            ? `Tem certeza que deseja excluir a instância ${instanceToDelete.name}? Esta ação não pode ser desfeita.`
+            ? t.instances.deleteConfirm(instanceToDelete.name)
             : ""
         }
         loading={deletingId !== null}
         onCancel={() => setInstanceToDelete(null)}
         onConfirm={() => void handleDelete()}
         open={Boolean(instanceToDelete)}
-        title="Excluir instância"
+        title={t.instances.deleteTitle}
       />
     </>
   );

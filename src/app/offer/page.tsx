@@ -10,9 +10,10 @@ import { Card, CardTitle, PageHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
+import { useI18n } from "@/i18n/provider";
 import { groupsApi, offersApi } from "@/lib/api";
 import { formatCurrency, formatPercent } from "@/lib/format";
-import { getOfferStatus, groupStatusLabels } from "@/lib/status";
+import { getOfferStatus } from "@/lib/status";
 import type { LinkedGroup, Offer } from "@/lib/types";
 import {
   formatApiError,
@@ -29,6 +30,7 @@ const DEFAULT_FILTERS: Filters = { providerId: DEFAULT_PROVIDER, offerId: "", se
 type SendErrors = { offerId?: string | null; to?: string | null; delay?: string | null };
 
 export default function OfferPage() {
+  const { locale, t } = useI18n();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [providerId, setProviderId] = useState(DEFAULT_PROVIDER);
   const [offerIdFilter, setOfferIdFilter] = useState("");
@@ -59,8 +61,8 @@ export default function OfferPage() {
         setPage(pageToLoad);
       })
       .catch((err) => {
-        toast.error("Não foi possível carregar as ofertas.", {
-          description: formatApiError(err),
+        toast.error(t.offers.loadError, {
+          description: formatApiError(err, t.validation.apiFallback),
         });
       })
       .finally(() => setLoading(false));
@@ -70,7 +72,11 @@ export default function OfferPage() {
     pageToLoad: number,
     filters: Filters = { providerId, offerId: offerIdFilter, search },
   ) {
-    const validationError = validatePositiveInteger(filters.offerId, "ID");
+    const validationError = validatePositiveInteger(
+      filters.offerId,
+      t.common.id,
+      t.validation,
+    );
     setFilterError(validationError);
 
     if (validationError) return;
@@ -84,8 +90,8 @@ export default function OfferPage() {
       .listLinked()
       .then(setGroups)
       .catch((err) => {
-        toast.error("Não foi possível carregar os grupos.", {
-          description: formatApiError(err),
+        toast.error(t.offers.loadGroupsError, {
+          description: formatApiError(err, t.validation.apiFallback),
         });
       })
       .finally(() => setLoadingGroups(false));
@@ -95,6 +101,7 @@ export default function OfferPage() {
     // Initial load only (state starts as loading); later loads come from the forms.
     void fetchOffers(1, DEFAULT_FILTERS);
     void loadGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleFilter(event: FormEvent<HTMLFormElement>) {
@@ -111,14 +118,16 @@ export default function OfferPage() {
 
   async function sendOffer(offerId: string) {
     const errors: SendErrors = {
-      offerId: required(offerId, "Oferta") ?? validatePositiveInteger(offerId, "ID da oferta"),
-      to: to ? null : "Selecione um grupo de destino.",
-      delay: validatePositiveInteger(delay, "Atraso"),
+      offerId:
+        required(offerId, t.offers.offer, t.validation) ??
+        validatePositiveInteger(offerId, t.offers.offerId, t.validation),
+      to: to ? null : t.offers.selectGroupError,
+      delay: validatePositiveInteger(delay, t.offers.delay, t.validation),
     };
     setSendErrors(errors);
 
     if (errors.offerId || errors.to || errors.delay) {
-      toast.error("Revise os dados de envio.", {
+      toast.error(t.offers.reviewSend, {
         description: errors.to ?? errors.offerId ?? errors.delay ?? undefined,
       });
       return;
@@ -132,12 +141,12 @@ export default function OfferPage() {
         to: to.trim(),
         ...(delay.trim() ? { delay: Number(delay) } : {}),
       });
-      toast.success("Oferta enviada.", {
-        description: `Enviada pela instância ${data.instanceName}.`,
+      toast.success(t.offers.sent, {
+        description: t.offers.sentBy(data.instanceName),
       });
     } catch (err) {
-      toast.error("Não foi possível enviar a oferta.", {
-        description: formatApiError(err),
+      toast.error(t.offers.sendError, {
+        description: formatApiError(err, t.validation.apiFallback),
       });
     } finally {
       setSendingOfferId(null);
@@ -151,7 +160,7 @@ export default function OfferPage() {
 
   const columns: DataTableColumn<Offer>[] = [
     {
-      header: "Produto",
+      header: t.offers.product,
       accessor: (offer) => (
         <div className="flex max-w-md items-center gap-3">
           <OfferThumbnail alt={offer.productName} src={offer.imageUrl} />
@@ -166,9 +175,9 @@ export default function OfferPage() {
                 rel="noreferrer"
                 target="_blank"
               >
-                Abrir oferta
+                {t.offers.openOffer}
                 <ExternalLink aria-hidden className="size-3" />
-                <span className="sr-only">(abre em nova aba)</span>
+                <span className="sr-only">{t.common.opensInNewTab}</span>
               </a>
             </p>
           </div>
@@ -176,47 +185,47 @@ export default function OfferPage() {
       ),
     },
     {
-      header: "ID",
+      header: t.common.id,
       accessor: (offer) => (
         <span className="font-mono text-xs text-muted-foreground">{offer.id}</span>
       ),
     },
     {
-      header: "Preço",
+      header: t.offers.price,
       className: "text-right",
       accessor: (offer) => (
-        <span className="font-medium tabular-nums">{formatCurrency(offer.amount)}</span>
+        <span className="font-medium tabular-nums">{formatCurrency(offer.amount, locale)}</span>
       ),
     },
     {
-      header: "Comissão",
+      header: t.offers.commission,
       className: "text-right",
       accessor: (offer) => (
-        <span className="tabular-nums">{formatPercent(offer.comissionRate)}</span>
+        <span className="tabular-nums">{formatPercent(offer.comissionRate, locale)}</span>
       ),
     },
     {
-      header: "Você recebe",
+      header: t.offers.youReceive,
       className: "text-right",
       accessor: (offer) => (
         <span className="font-medium tabular-nums text-success">
-          {formatCurrency(offer.amountToReceive)}
+          {formatCurrency(offer.amountToReceive, locale)}
         </span>
       ),
     },
     {
-      header: "Status",
+      header: t.common.status,
       accessor: (offer) => {
-        const status = getOfferStatus(offer.active);
+        const status = getOfferStatus(offer.active, t.status.offer);
         return <Badge variant={status.variant}>{status.label}</Badge>;
       },
     },
     {
-      header: "Ação",
+      header: t.common.action,
       className: "text-right",
       accessor: (offer) => (
         <Button
-          aria-label={`Enviar oferta ${offer.productName}`}
+          aria-label={t.offers.sendOfferAria(offer.productName)}
           disabled={sendingOfferId === offer.id}
           onClick={() => {
             setSelectedOfferId(offer.id);
@@ -226,30 +235,30 @@ export default function OfferPage() {
           variant="secondary"
         >
           <Send aria-hidden />
-          {sendingOfferId === offer.id ? "Enviando..." : "Enviar"}
+          {sendingOfferId === offer.id ? t.common.sending : t.common.send}
         </Button>
       ),
     },
   ];
 
   const groupOptions = groups.map((group) => ({
-    label: `${group.name} (${groupStatusLabels[group.status] ?? group.status})`,
+    label: `${group.name} (${t.status.group[group.status] ?? group.status})`,
     value: group.externalId,
   }));
 
   return (
     <>
       <PageHeader
-        description="Liste, filtre e envie ofertas para grupos de WhatsApp pela instância configurada."
-        title="Ofertas"
+        description={t.offers.description}
+        title={t.offers.title}
       />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
-          <CardTitle className="mb-4">Filtros</CardTitle>
+          <CardTitle className="mb-4">{t.offers.filters}</CardTitle>
           <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleFilter}>
             <Input
-              label="Provedor"
+              label={t.offers.provider}
               onChange={(event) => setProviderId(event.target.value)}
               placeholder="shopee"
               value={providerId}
@@ -257,48 +266,48 @@ export default function OfferPage() {
             <Input
               error={filterError}
               inputMode="numeric"
-              label="ID"
+              label={t.common.id}
               onChange={(event) => setOfferIdFilter(event.target.value)}
               placeholder="20099553879"
               value={offerIdFilter}
             />
             <Input
               containerClassName="sm:col-span-2"
-              label="Busca"
+              label={t.common.search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Nome do produto"
+              placeholder={t.offers.searchPlaceholder}
               type="search"
               value={search}
             />
             <div className="flex gap-2 sm:col-span-2">
               <Button disabled={loading} type="submit">
                 <Search aria-hidden />
-                {loading ? "Buscando..." : "Buscar ofertas"}
+                {loading ? t.offers.searching : t.offers.searchSubmit}
               </Button>
               <Button disabled={loading} onClick={clearFilters} type="button" variant="ghost">
-                Limpar
+                {t.offers.clear}
               </Button>
             </div>
           </form>
         </Card>
 
         <Card>
-          <CardTitle className="mb-4">Enviar oferta</CardTitle>
+          <CardTitle className="mb-4">{t.offers.sendTitle}</CardTitle>
           <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSend}>
             <Input
               error={sendErrors.offerId}
-              hint="Clique em Enviar na tabela ou digite o ID."
+              hint={t.offers.offerIdHint}
               inputMode="numeric"
-              label="ID da oferta"
+              label={t.offers.offerId}
               onChange={(event) => setSelectedOfferId(event.target.value)}
               placeholder="20099553879"
               value={selectedOfferId}
             />
             <Input
               error={sendErrors.delay}
-              hint="Opcional, em milissegundos."
+              hint={t.offers.delayHint}
               inputMode="numeric"
-              label="Atraso"
+              label={t.offers.delay}
               onChange={(event) => setDelay(event.target.value)}
               placeholder="1000"
               value={delay}
@@ -309,24 +318,24 @@ export default function OfferPage() {
               error={sendErrors.to}
               hint={
                 !loadingGroups && groupOptions.length === 0
-                  ? "Nenhum grupo salvo. Salve um grupo na página Grupos."
+                  ? t.offers.noGroups
                   : undefined
               }
-              label="Destino"
+              label={t.offers.destination}
               onValueChange={(value) => {
                 setTo(value);
                 setSendErrors((current) => ({ ...current, to: null }));
               }}
               options={groupOptions}
-              placeholder={loadingGroups ? "Carregando grupos..." : "Selecione um grupo"}
+              placeholder={loadingGroups ? t.offers.loadingGroups : t.offers.selectGroup}
               value={to}
             />
             <div className="sm:col-span-2">
               <Button disabled={sendingOfferId !== null} type="submit">
                 <Send aria-hidden />
                 {sendingOfferId !== null && sendingOfferId === selectedOfferId
-                  ? "Enviando..."
-                  : "Enviar oferta"}
+                  ? t.common.sending
+                  : t.offers.sendSubmit}
               </Button>
             </div>
           </form>
@@ -340,18 +349,18 @@ export default function OfferPage() {
           <EmptyState
             action={
               <Button onClick={clearFilters} size="sm" variant="secondary">
-                Limpar filtros
+                {t.offers.clearFilters}
               </Button>
             }
-            description="Ajuste os filtros ou busque por outro produto."
+            description={t.offers.emptyDescription}
             icon={PackageSearch}
-            title="Nenhuma oferta encontrada"
+            title={t.offers.emptyTitle}
           />
         }
         getRowKey={(offer) => `${offer.provider.id}-${offer.id}`}
         limit={LIMIT}
         loading={loading}
-        loadingLabel="Carregando ofertas..."
+        loadingLabel={t.offers.loadingOffers}
         onPaginationChange={({ page: nextPage }) => loadOffers(nextPage)}
         page={page}
         paginationEnabled

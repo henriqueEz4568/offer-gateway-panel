@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, PageHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
+import { useI18n } from "@/i18n/provider";
 import { instancesApi } from "@/lib/api";
 import {
   formatApiError,
@@ -20,6 +21,7 @@ type FieldErrors = { name?: string | null; number?: string | null };
 
 export default function CreateInstancePage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [type, setType] = useState("connection");
   const [number, setNumber] = useState("");
@@ -32,8 +34,8 @@ export default function CreateInstancePage() {
     setError(null);
 
     const errors: FieldErrors = {
-      name: required(name, "Nome"),
-      number: validatePositiveInteger(number, "Número"),
+      name: required(name, t.common.name, t.validation),
+      number: validatePositiveInteger(number, t.instances.number, t.validation),
     };
     setFieldErrors(errors);
 
@@ -49,10 +51,10 @@ export default function CreateInstancePage() {
         ...(type.trim() ? { type: type.trim() } : {}),
         ...(number.trim() ? { number: Number(number) } : {}),
       });
-      toast.success(`Instância ${created.name ?? name.trim()} criada.`);
+      toast.success(t.instances.created(created.name ?? name.trim()));
       router.push("/instances");
     } catch (err) {
-      setError(formatApiError(err));
+      setError(formatApiError(err, t.validation.apiFallback));
     } finally {
       setLoading(false);
     }
@@ -65,12 +67,12 @@ export default function CreateInstancePage() {
           <Button asChild variant="secondary">
             <Link href="/instances">
               <ArrowLeft aria-hidden />
-              Voltar
+              {t.common.back}
             </Link>
           </Button>
         }
-        description="Crie uma instância local. O token é gerado pela API."
-        title="Nova instância"
+        description={t.instances.createDescription}
+        title={t.instances.newInstance}
       />
 
       <Card className="max-w-2xl">
@@ -78,30 +80,30 @@ export default function CreateInstancePage() {
           {error ? <Alert tone="error">{error}</Alert> : null}
           <Input
             error={fieldErrors.name}
-            label="Nome"
+            label={t.common.name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="minha-instancia"
+            placeholder={t.instances.namePlaceholder}
             required
             value={name}
           />
           <Input
-            label="Tipo"
+            label={t.instances.type}
             onChange={(event) => setType(event.target.value)}
             placeholder="connection"
             value={type}
           />
           <Input
             error={fieldErrors.number}
-            hint="Opcional. Apenas números, com DDI e DDD."
+            hint={t.instances.numberHint}
             inputMode="numeric"
-            label="Número"
+            label={t.instances.number}
             onChange={(event) => setNumber(event.target.value)}
             placeholder="5511999999999"
             value={number}
           />
           <div>
             <Button disabled={loading} type="submit">
-              {loading ? "Criando..." : "Criar instância"}
+              {loading ? t.instances.creating : t.instances.create}
             </Button>
           </div>
         </form>

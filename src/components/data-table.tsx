@@ -1,4 +1,7 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { useI18n } from "@/i18n/provider";
 import { Skeleton } from "./ui/skeleton";
 import {
   Pagination,
@@ -43,20 +46,17 @@ type DataTableProps<T> = {
 export function DataTable<T>({
   columns,
   data,
-  emptyState = (
-    <p className="py-10 text-center text-sm text-muted-foreground">
-      Nenhum registro encontrado.
-    </p>
-  ),
+  emptyState,
   getRowKey,
   limit = 20,
   loading = false,
-  loadingLabel = "Carregando...",
+  loadingLabel,
   onPaginationChange,
   page = 1,
   paginationEnabled = false,
   skeletonRows = 5,
 }: DataTableProps<T>) {
+  const { t } = useI18n();
   // The API does not return a total; a short page means it is the last one.
   const hasNextPage = data.length >= limit;
   const showPagination = paginationEnabled && (page > 1 || hasNextPage);
@@ -89,7 +89,7 @@ export function DataTable<T>({
                   {columns.map((column, columnIndex) => (
                     <TableCell key={column.header}>
                       {rowIndex === 0 && columnIndex === 0 ? (
-                        <span className="sr-only">{loadingLabel}</span>
+                        <span className="sr-only">{loadingLabel ?? t.common.loading}</span>
                       ) : null}
                       <Skeleton className="h-4 w-full max-w-32" />
                     </TableCell>
@@ -110,7 +110,13 @@ export function DataTable<T>({
               ))
             ) : (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={columns.length}>{emptyState}</TableCell>
+                <TableCell colSpan={columns.length}>
+                  {emptyState ?? (
+                    <p className="py-10 text-center text-sm text-muted-foreground">
+                      {t.common.noRecords}
+                    </p>
+                  )}
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -118,7 +124,7 @@ export function DataTable<T>({
       </div>
       {showPagination ? (
         <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3">
-          <p className="text-sm text-muted-foreground">Página {page}</p>
+          <p className="text-sm text-muted-foreground">{t.common.page(page)}</p>
           <Pagination className="mx-0 w-auto">
             <PaginationContent>
               <PaginationItem>

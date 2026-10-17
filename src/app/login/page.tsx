@@ -4,11 +4,13 @@ import { Boxes, Eye, EyeOff, LogIn } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/theme/theme-provider";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/i18n/provider";
 import { authApi } from "@/lib/api";
 import { isAuthenticated, setToken } from "@/lib/auth";
 import { formatApiError, required, validateEmail } from "@/lib/validation";
@@ -20,6 +22,7 @@ type FieldErrors = { email?: string | null; password?: string | null };
 export default function LoginPage() {
   const router = useRouter();
   const { appName, logoUrl } = useTheme();
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -40,8 +43,10 @@ export default function LoginPage() {
     setError(null);
 
     const errors: FieldErrors = {
-      email: required(email, "E-mail") ?? validateEmail(email),
-      password: required(password, "Senha"),
+      email:
+        required(email, t.login.email, t.validation) ??
+        validateEmail(email, t.validation),
+      password: required(password, t.login.password, t.validation),
     };
     setFieldErrors(errors);
 
@@ -61,14 +66,15 @@ export default function LoginPage() {
       setToken(data.access_token);
       router.replace("/offer");
     } catch (err) {
-      setError(formatApiError(err));
+      setError(formatApiError(err, t.validation.apiFallback));
       setLoading(false);
     }
   }
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-muted/50 px-4 py-12">
-      <div className="absolute right-4 top-4">
+      <div className="absolute right-4 top-4 flex items-center gap-2">
+        <LanguageSwitcher />
         <ThemeToggle />
       </div>
       {isMock() ? <MockBanner /> : null}
@@ -94,9 +100,9 @@ export default function LoginPage() {
 
         <Card className="p-6 shadow-sm sm:p-8">
           <div className="mb-6">
-            <h1 className="text-xl font-semibold tracking-tight">Entrar</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{t.login.title}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Use seu e-mail e senha para acessar o painel.
+              {t.login.subtitle}
             </p>
           </div>
 
@@ -107,9 +113,9 @@ export default function LoginPage() {
               autoComplete="email"
               autoFocus
               error={fieldErrors.email}
-              label="E-mail"
+              label={t.login.email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="voce@empresa.com"
+              placeholder={t.login.emailPlaceholder}
               ref={emailRef}
               required
               type="email"
@@ -121,7 +127,7 @@ export default function LoginPage() {
               endAdornment={
                 <Button
                   aria-controls="password"
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  aria-label={showPassword ? t.login.hidePassword : t.login.showPassword}
                   aria-pressed={showPassword}
                   onClick={() => setShowPassword((current) => !current)}
                   size="icon-sm"
@@ -133,9 +139,9 @@ export default function LoginPage() {
               }
               error={fieldErrors.password}
               id="password"
-              label="Senha"
+              label={t.login.password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="Digite sua senha"
+              placeholder={t.login.passwordPlaceholder}
               ref={passwordRef}
               required
               type={showPassword ? "text" : "password"}
@@ -144,7 +150,7 @@ export default function LoginPage() {
 
             <Button className="mt-2 w-full" disabled={loading} type="submit">
               <LogIn aria-hidden />
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? t.login.submitting : t.login.submit}
             </Button>
           </form>
         </Card>
