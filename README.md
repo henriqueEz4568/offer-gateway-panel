@@ -33,7 +33,8 @@ yarn dev                     # http://localhost:3000
 
 | Variável | Obrigatória | Descrição |
 | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | Sim | URL base da API NestJS (ex.: `http://localhost:3001`). Sem ela, o app falha com uma mensagem explicando o que configurar. |
+| `NEXT_PUBLIC_API_URL` | Sim (fora do modo release) | URL base da API NestJS (ex.: `http://localhost:3001`). Sem ela, o app falha com uma mensagem explicando o que configurar. |
+| `NEXT_PUBLIC_NODE_ENV` | Não | `release` liga o [modo release](#modo-release-dados-fictícios) (dados fictícios, sem API). Nunca use em produção. |
 | `NEXT_PUBLIC_THEME_PRIMARY` | Não | Cor primária `#RRGGBB` usada quando a API não define uma. |
 | `NEXT_PUBLIC_THEME_SECONDARY` | Não | Cor secundária `#RRGGBB` usada quando a API não define uma. |
 
@@ -45,6 +46,7 @@ Quando o painel roda em HTTPS e a API em HTTP, as chamadas passam pelo proxy `sr
 | --- | --- |
 | `yarn dev` | Servidor de desenvolvimento |
 | `yarn build` / `yarn start` | Build e servidor de produção |
+| `yarn dev:release` / `yarn start:release` | Mesmo que acima, em [modo release](#modo-release-dados-fictícios) |
 | `yarn lint` | ESLint |
 | `yarn typecheck` | `tsc --noEmit` |
 | `yarn test` | Testes unitários (Vitest); `yarn test:watch` em modo watch |
@@ -92,6 +94,49 @@ NEXT_PUBLIC_THEME_PRIMARY=#2563eb NEXT_PUBLIC_THEME_SECONDARY=#f59e0b yarn dev
 
 Ou sirva um JSON qualquer em `{NEXT_PUBLIC_API_URL}/theme`. Em produção, mudanças no tema aparecem em até 60 segundos.
 
+## Modo release (dados fictícios)
+
+No modo release **nenhuma** chamada vai para a API real: o axios (`src/lib/api.ts`) usa um adapter que responde com dados fixos em memória. Serve para qualquer pessoa testar o painel sem backend. Todo o código fica em `src/mock/`.
+
+> **Atenção:** nunca defina `NEXT_PUBLIC_NODE_ENV=release` no ambiente de produção. Nesse modo o login aceita **qualquer** e-mail e senha (bypass de autenticação).
+
+### Como ligar
+
+Coloque `NEXT_PUBLIC_NODE_ENV=release` no `.env` (veja `.env.example`) e rode `yarn dev`, ou use os scripts:
+
+```bash
+yarn dev:release     # next dev com NEXT_PUBLIC_NODE_ENV=release
+yarn start:release   # build + start com NEXT_PUBLIC_NODE_ENV=release
+```
+
+Não é preciso definir `NEXT_PUBLIC_API_URL`.
+
+- `isMock()` (`src/mock/index.ts`) verifica só `NEXT_PUBLIC_NODE_ENV === "release"`. Sem essa variável (por exemplo, em produção com `NODE_ENV=production`), o painel chama a API normalmente.
+- O `NODE_ENV` não é usado para ligar o mock: o Next só aceita `production`, `development` e `test` (`environment-variables.md`), define o valor antes de ler o `.env` e, no código do navegador, sempre o troca por `development` ou `production`. Variáveis com prefixo `NEXT_PUBLIC_` chegam ao navegador normalmente.
+- O valor é embutido no bundle **no momento do build**. Por isso `start:release` refaz o build com a variável; um build feito sem ela não liga o modo release.
+
+### O que é mockado
+
+| Rota | Resposta |
+| --- | --- |
+| `POST /auth/login` | qualquer credencial, devolve `{ access_token: "mock-token" }` |
+| `GET /users/me` | usuário fixo |
+| `GET /offers` | 12 ofertas; respeita `page`, `limit`, `search` e `id` |
+| `POST /offers/send-offer` | `{ sent: true, instanceName, description, offer }` |
+| `GET /instances` / `POST /instances` / `POST /instances/import` | lista (filtros `id`, `external_id`, `name`), cria e devolve a lista |
+| `POST /instances/:id/connection` | status `connecting`, QR code fictício e pairing code `ABCD-1234` |
+| `DELETE /instances/:id` | remove a instância |
+| `GET /evolution/groups` | `source=database` devolve os grupos linkados, `source=evolution` os grupos da Evolution; respeita `search` |
+| `POST /evolution/groups/import`, `/reset`, `/:groupId/link` | respostas no formato de `src/lib/types.ts`; `link` cria ou atualiza o grupo linkado |
+
+Seeds: 2 instâncias (uma `open`, uma `close`), 6 grupos da Evolution (3 já linkados) e 12 ofertas. Rotas não mapeadas também respondem com sucesso: `GET` devolve `[]` e os outros métodos `{}`. A rota `/api/proxy` responde 404 e a busca de `GET {API}/theme` é pulada nesse modo (o tema usa as variáveis `NEXT_PUBLIC_THEME_*` ou o padrão).
+
+### Estado
+
+O estado fica em arrays em memória no navegador (`src/mock/data.ts`): criar, deletar e linkar alteram esses arrays, e **recarregar a página volta ao estado original**.
+
+Uma faixa "Modo release: dados fictícios" aparece no rodapé enquanto o modo está ativo. Quando o modo está desligado, as rotas e os dados do mock não são carregados (import dinâmico dentro do adapter).
+
 ## Estrutura
 
 ```
@@ -105,5 +150,6 @@ src/
     api.ts              cliente da API
     theme.ts            lógica pura do tema
     theme-server.ts     busca do tema no servidor
+  mock/                 modo release: adapter, dados e rotas fictícias
 tests/                  testes unitários
 ```

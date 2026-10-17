@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { isMock } from "@/mock";
 import { readApiUrl } from "./env";
 import {
   mergeThemeSources,
@@ -13,7 +14,7 @@ const THEME_REVALIDATE_SECONDS = 60;
 
 async function fetchApiTheme(): Promise<ThemeInput> {
   const apiUrl = readApiUrl();
-  if (!apiUrl) return {};
+  if (!apiUrl || isMock()) return {};
 
   try {
     const response = await fetch(`${apiUrl}/theme`, {

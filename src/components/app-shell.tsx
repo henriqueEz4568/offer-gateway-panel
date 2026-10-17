@@ -29,6 +29,8 @@ import { authApi } from "@/lib/api";
 import { getToken, logout, subscribeToToken } from "@/lib/auth";
 import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { isMock } from "@/mock";
+import { MockBanner } from "@/mock/mock-banner";
 
 const PUBLIC_ROUTES = ["/login"];
 
@@ -114,6 +116,7 @@ function AuthenticatedShell({ children }: { children: React.ReactNode }) {
         <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           {children}
         </main>
+        {isMock() ? <MockBanner className="lg:left-64" /> : null}
       </div>
     </div>
   );

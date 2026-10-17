@@ -1,6 +1,7 @@
 import axios from "axios";
 import type { NextRequest } from "next/server";
 import { getApiUrl } from "@/lib/env";
+import { isMock } from "@/mock";
 
 type ProxyContext = {
   params: Promise<{ path: string[] }>;
@@ -32,6 +33,10 @@ function getContentType(value: unknown) {
 }
 
 async function proxy(request: NextRequest, context: ProxyContext) {
+  if (isMock()) {
+    return new Response(null, { status: 404 });
+  }
+
   const { path } = await context.params;
   const body =
     request.method === "GET" || request.method === "HEAD"

@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api";
 import { isAuthenticated, setToken } from "@/lib/auth";
 import { formatApiError, required, validateEmail } from "@/lib/validation";
+import { isMock } from "@/mock";
+import { MockBanner } from "@/mock/mock-banner";
 
 type FieldErrors = { email?: string | null; password?: string | null };
 
@@ -69,6 +71,7 @@ export default function LoginPage() {
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
+      {isMock() ? <MockBanner /> : null}
 
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">

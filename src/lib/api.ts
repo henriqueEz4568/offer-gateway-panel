@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getToken, logout } from "./auth";
+import { isMock, mockAdapter } from "@/mock";
 import { getApiUrl } from "./env";
 import type {
   EvolutionGroup,
@@ -15,6 +16,11 @@ import type {
 } from "./types";
 
 function buildBaseUrl() {
+  // Em modo release nada vai para a API, então a URL não é obrigatória.
+  if (isMock()) {
+    return "";
+  }
+
   const baseUrl = getApiUrl();
 
   if (
@@ -30,6 +36,7 @@ function buildBaseUrl() {
 
 function createInstance() {
   return axios.create({
+    adapter: isMock() ? mockAdapter : undefined,
     baseURL: buildBaseUrl(),
     headers: {
       "Content-Type": "application/json",
