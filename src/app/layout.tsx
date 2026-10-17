@@ -5,6 +5,8 @@ import { AppShell } from "@/components/app-shell";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { themeModeScript } from "@/components/theme/theme-mode";
 import { Toaster } from "@/components/ui/toaster";
+import { I18nProvider } from "@/i18n/provider";
+import { getDictionary, getLocale } from "@/i18n/server";
 import { themeToCssVariables } from "@/lib/theme";
 import { getTheme } from "@/lib/theme-server";
 import { cn } from "@/lib/utils";
@@ -16,11 +18,11 @@ const geistSans = Geist({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { appName } = await getTheme();
+  const [{ appName }, t] = await Promise.all([getTheme(), getDictionary()]);
 
   return {
     title: { default: appName, template: `%s · ${appName}` },
-    description: `Painel de gerenciamento do ${appName}`,
+    description: t.metadata.description(appName),
   };
 }
 
@@ -29,12 +31,12 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const theme = await getTheme();
+  const [theme, locale] = await Promise.all([getTheme(), getLocale()]);
 
   return (
     <html
       className={cn(geistSans.variable, "h-full antialiased")}
-      lang="pt-BR"
+      lang={locale}
       // Only validated hex/radius values (see themeToCssVariables).
       style={themeToCssVariables(theme) as CSSProperties}
       // The inline script below may add `.dark` before hydration.
@@ -44,10 +46,12 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeModeScript }} />
       </head>
       <body className="min-h-full">
-        <ThemeProvider appName={theme.appName} logoUrl={theme.logoUrl}>
-          <AppShell>{children}</AppShell>
-          <Toaster />
-        </ThemeProvider>
+        <I18nProvider initialLocale={locale}>
+          <ThemeProvider appName={theme.appName} logoUrl={theme.logoUrl}>
+            <AppShell>{children}</AppShell>
+            <Toaster />
+          </ThemeProvider>
+        </I18nProvider>
       </body>
     </html>
   );

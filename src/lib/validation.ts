@@ -1,25 +1,32 @@
+import type { Dictionary } from "@/i18n/dictionaries";
 import type { GroupStatus } from "./types";
+
+type Messages = Dictionary["validation"];
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^\d{10,15}$/;
 
-export function required(value: string, label: string) {
+export function required(value: string, label: string, messages: Messages) {
   if (!value.trim()) {
-    return `${label} é obrigatório.`;
+    return messages.required(label);
   }
 
   return null;
 }
 
-export function validateEmail(value: string) {
+export function validateEmail(value: string, messages: Messages) {
   if (!emailRegex.test(value.trim())) {
-    return "Informe um e-mail válido.";
+    return messages.email;
   }
 
   return null;
 }
 
-export function validatePositiveInteger(value: string, label: string) {
+export function validatePositiveInteger(
+  value: string,
+  label: string,
+  messages: Messages,
+) {
   if (!value.trim()) {
     return null;
   }
@@ -27,15 +34,15 @@ export function validatePositiveInteger(value: string, label: string) {
   const number = Number(value);
 
   if (!Number.isInteger(number) || number <= 0) {
-    return `${label} deve ser um número inteiro positivo.`;
+    return messages.positiveInteger(label);
   }
 
   return null;
 }
 
-export function validateBrazilPhone(value: string) {
+export function validateBrazilPhone(value: string, messages: Messages) {
   if (!phoneRegex.test(value.trim())) {
-    return "Informe o destino apenas com números, incluindo DDI e DDD.";
+    return messages.phone;
   }
 
   return null;
@@ -45,7 +52,8 @@ export function validateGroupStatus(value: string): value is GroupStatus {
   return value === "disabled" || value === "active" || value === "pending";
 }
 
-export function formatApiError(error: unknown) {
+/** API message when present (shown as sent by the API), otherwise `fallback`. */
+export function formatApiError(error: unknown, fallback: string) {
   if (
     typeof error === "object" &&
     error !== null &&
@@ -65,5 +73,5 @@ export function formatApiError(error: unknown) {
     }
   }
 
-  return "Não foi possível concluir a operação.";
+  return fallback;
 }

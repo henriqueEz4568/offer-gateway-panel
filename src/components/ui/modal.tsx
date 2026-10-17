@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import type { ReactNode } from "react";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
@@ -26,6 +27,8 @@ export function Modal({
   open,
   title,
 }: ModalProps) {
+  const { t } = useI18n();
+
   return (
     <DialogPrimitive.Root onOpenChange={onOpenChange} open={open}>
       <DialogPrimitive.Portal>
@@ -46,7 +49,7 @@ export function Modal({
           </div>
           <DialogPrimitive.Close asChild>
             <Button
-              aria-label="Fechar"
+              aria-label={t.common.close}
               className="absolute right-3 top-3"
               size="icon-sm"
               variant="ghost"
@@ -76,6 +79,8 @@ type SheetProps = {
 
 /** Side drawer used for the navigation on small screens. */
 export function Sheet({ children, className, onOpenChange, open, title }: SheetProps) {
+  const { t } = useI18n();
+
   return (
     <DialogPrimitive.Root onOpenChange={onOpenChange} open={open}>
       <DialogPrimitive.Portal>
@@ -91,7 +96,7 @@ export function Sheet({ children, className, onOpenChange, open, title }: SheetP
           {children}
           <DialogPrimitive.Close asChild>
             <Button
-              aria-label="Fechar menu"
+              aria-label={t.shell.closeMenu}
               className="absolute right-3 top-3"
               size="icon-sm"
               variant="ghost"
@@ -117,22 +122,24 @@ type ConfirmationModalProps = {
 };
 
 export function ConfirmationModal({
-  confirmLabel = "Confirmar",
+  confirmLabel,
   description,
   loading = false,
-  loadingLabel = "Excluindo...",
+  loadingLabel,
   onCancel,
   onConfirm,
   open,
   title,
 }: ConfirmationModalProps) {
+  const { t } = useI18n();
+
   return (
     <Modal
       description={description}
       footer={
         <>
           <Button disabled={loading} onClick={onCancel} type="button" variant="secondary">
-            Cancelar
+            {t.common.cancel}
           </Button>
           <Button
             disabled={loading}
@@ -140,7 +147,7 @@ export function ConfirmationModal({
             type="button"
             variant="destructive"
           >
-            {loading ? loadingLabel : confirmLabel}
+            {loading ? (loadingLabel ?? t.common.deleting) : (confirmLabel ?? t.common.confirm)}
           </Button>
         </>
       }

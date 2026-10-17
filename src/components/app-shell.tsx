@@ -13,6 +13,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTheme } from "@/components/theme/theme-provider";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Dictionary } from "@/i18n/dictionaries";
+import { useI18n } from "@/i18n/provider";
 import { authApi } from "@/lib/api";
 import { getToken, logout, subscribeToToken } from "@/lib/auth";
 import type { User } from "@/lib/types";
@@ -34,10 +37,14 @@ import { MockBanner } from "@/mock/mock-banner";
 
 const PUBLIC_ROUTES = ["/login"];
 
-const navItems: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/offer", label: "Ofertas", icon: Tag },
-  { href: "/instances", label: "Instâncias", icon: Smartphone },
-  { href: "/groups", label: "Grupos", icon: Users },
+const navItems: {
+  href: string;
+  label: keyof Pick<Dictionary["shell"], "offers" | "instances" | "groups">;
+  icon: LucideIcon;
+}[] = [
+  { href: "/offer", label: "offers", icon: Tag },
+  { href: "/instances", label: "instances", icon: Smartphone },
+  { href: "/groups", label: "groups", icon: Users },
 ];
 
 /** `undefined` while hydrating (unknown), then the token or `null`. */
@@ -57,6 +64,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const { t } = useI18n();
   const token = useToken();
   const [user, setUser] = useState<User | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -96,7 +104,7 @@ function AuthenticatedShell({ children }: { children: React.ReactNode }) {
         <SidebarContent user={user} />
       </aside>
 
-      <Sheet onOpenChange={setMenuOpen} open={menuOpen} title="Menu de navegação">
+      <Sheet onOpenChange={setMenuOpen} open={menuOpen} title={t.shell.menuTitle}>
         <SidebarContent onNavigate={() => setMenuOpen(false)} user={user} />
       </Sheet>
 
@@ -104,7 +112,7 @@ function AuthenticatedShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur lg:hidden">
           <Button
             aria-expanded={menuOpen}
-            aria-label="Abrir menu"
+            aria-label={t.shell.openMenu}
             onClick={() => setMenuOpen(true)}
             size="icon-sm"
             variant="ghost"
@@ -158,6 +166,7 @@ function SidebarContent({
   user: User | null;
 }) {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <>
@@ -165,7 +174,7 @@ function SidebarContent({
         <Brand onNavigate={onNavigate} />
       </div>
 
-      <nav aria-label="Principal" className="flex-1 px-3 py-2">
+      <nav aria-label={t.shell.navLabel} className="flex-1 px-3 py-2">
         <ul className="grid gap-1">
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
@@ -184,7 +193,7 @@ function SidebarContent({
                   onClick={onNavigate}
                 >
                   <Icon aria-hidden className="size-4" />
-                  {label}
+                  {t.shell[label]}
                 </Link>
               </li>
             );
@@ -194,8 +203,14 @@ function SidebarContent({
 
       <div className="grid gap-3 border-t border-sidebar-border p-3">
         <div className="flex items-center justify-between px-2">
-          <span className="text-xs font-medium text-muted-foreground">Tema</span>
+          <span className="text-xs font-medium text-muted-foreground">{t.theme.label}</span>
           <ThemeToggle />
+        </div>
+        <div className="flex items-center justify-between px-2">
+          <span className="text-xs font-medium text-muted-foreground">
+            {t.language.label}
+          </span>
+          <LanguageSwitcher />
         </div>
         <UserMenu user={user} />
       </div>
@@ -213,6 +228,8 @@ function initials(name: string) {
 }
 
 function UserMenu({ user }: { user: User | null }) {
+  const { t } = useI18n();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -238,7 +255,7 @@ function UserMenu({ user }: { user: User | null }) {
               <>
                 <Skeleton className="h-3.5 w-24" />
                 <Skeleton className="mt-1 h-3 w-32" />
-                <span className="sr-only">Conta</span>
+                <span className="sr-only">{t.shell.account}</span>
               </>
             )}
           </span>
@@ -258,7 +275,7 @@ function UserMenu({ user }: { user: User | null }) {
         ) : null}
         <DropdownMenuItem onSelect={logout} variant="destructive">
           <LogOut aria-hidden />
-          Sair
+          {t.shell.logout}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -266,9 +283,11 @@ function UserMenu({ user }: { user: User | null }) {
 }
 
 function ShellSkeleton() {
+  const { t } = useI18n();
+
   return (
     <div aria-busy className="min-h-screen bg-background lg:pl-64">
-      <span className="sr-only">Carregando...</span>
+      <span className="sr-only">{t.common.loading}</span>
       <div className="fixed inset-y-0 left-0 hidden w-64 border-r border-sidebar-border bg-sidebar p-5 lg:block">
         <Skeleton className="h-8 w-36" />
         <div className="mt-8 grid gap-2">

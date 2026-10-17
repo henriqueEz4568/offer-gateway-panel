@@ -2,6 +2,7 @@
 
 import { ImageOff } from "lucide-react";
 import { useState } from "react";
+import { useI18n } from "@/i18n/provider";
 
 const SIZE = 48;
 
@@ -10,13 +11,14 @@ const SIZE = 48;
  * so next/image would require maintaining `remotePatterns` for each of them.
  */
 export function OfferThumbnail({ alt, src }: { alt: string; src?: string | null }) {
+  const { t } = useI18n();
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const failed = !src || failedSrc === src;
 
   if (failed) {
     return (
       <div
-        aria-label={`Sem imagem: ${alt}`}
+        aria-label={t.common.noImage(alt)}
         className="flex size-12 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground"
         role="img"
       >

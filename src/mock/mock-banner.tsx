@@ -1,6 +1,11 @@
+"use client";
+
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 export function MockBanner({ className }: { className?: string }) {
+  const { t } = useI18n();
+
   return (
     <>
       {/* Espaço para a faixa fixa não cobrir o fim da página. */}
@@ -12,7 +17,7 @@ export function MockBanner({ className }: { className?: string }) {
         )}
         role="status"
       >
-        Modo release: dados fictícios
+        {t.mock.banner}
       </div>
     </>
   );

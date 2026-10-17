@@ -10,6 +10,7 @@ O tema é **white-label**: as cores primária e secundária, o nome e o logo vê
 - **Instâncias**: listagem do banco ou direto da Evolution API, criação, conexão (QR code e pairing code) e exclusão com confirmação.
 - **Grupos**: consulta na Evolution API e salvamento com status (ativo, pendente, desativado).
 - **Tema**: cores da API com contraste WCAG garantido, modo claro/escuro/sistema sem flash na carga.
+- **Idiomas**: inglês (padrão), português (Brasil) e espanhol, com seletor na sidebar e no login.
 - **UX**: sidebar responsiva (drawer no mobile), skeletons, empty states, toasts, foco e erros acessíveis.
 
 ## Stack
@@ -94,6 +95,18 @@ NEXT_PUBLIC_THEME_PRIMARY=#2563eb NEXT_PUBLIC_THEME_SECONDARY=#f59e0b yarn dev
 
 Ou sirva um JSON qualquer em `{NEXT_PUBLIC_API_URL}/theme`. Em produção, mudanças no tema aparecem em até 60 segundos.
 
+## Idiomas (i18n)
+
+O painel está em **inglês (`en`, padrão)**, **português (`pt-BR`)** e **espanhol (`es`)**. O idioma é escolhido no seletor da sidebar (ou no canto do login) e fica salvo no cookie `locale` por um ano.
+
+- **Sem mudar as URLs**: o idioma vem do cookie, não do caminho. O layout raiz lê o cookie no servidor (`src/i18n/server.ts`), então a página já chega no idioma certo, com `<html lang>` e a descrição da página traduzidos, sem flash. Sem cookie, ou com valor inválido, vale o inglês. Como o layout lê um cookie, as páginas são renderizadas por requisição (dinâmicas).
+- **Dicionários tipados**: `src/i18n/dictionaries/en.ts` é a referência e define o tipo `Dictionary`; `pt-BR.ts` e `es.ts` precisam ter exatamente as mesmas chaves, ou o `tsc` falha. Textos com valores usam funções, ex.: ``sentBy: (name) => `Sent through instance ${name}.` ``.
+- **Uso nos componentes**: `const { t, locale } = useI18n()` (`src/i18n/provider.tsx`) e `t.offers.title`. Os helpers de `src/lib` recebem o dicionário ou o locale (`required(value, label, t.validation)`, `getInstanceStatus(status, t.status.instance)`, `formatCurrency(value, locale)`).
+- **Troca de idioma**: atualiza o cookie, o `<html lang>` e remonta o conteúdo, para que mensagens já exibidas (ex.: erros de validação) também mudem de idioma. Um formulário preenchido pela metade é limpo nessa troca.
+- **O que não é traduzido**: mensagens de erro vindas da API (aparecem como a API enviou) e dados (nomes de produtos, grupos, instâncias). Valores continuam em BRL; só o formato do número segue o idioma (`R$1,234.50`, `R$ 1.234,50`, `1234,50 R$`).
+
+Para adicionar um idioma: crie o dicionário em `src/i18n/dictionaries/`, registre-o em `dictionaries/index.ts` e inclua o código em `locales` e `localeNames` (`src/i18n/config.ts`).
+
 ## Modo release (dados fictícios)
 
 No modo release **nenhuma** chamada vai para a API real: o axios (`src/lib/api.ts`) usa um adapter que responde com dados fixos em memória. Serve para qualquer pessoa testar o painel sem backend. Todo o código fica em `src/mock/`.
@@ -146,6 +159,7 @@ src/
     app-shell.tsx       sidebar, guarda de autenticação e menu do usuário
     theme/              provider, toggle e script de modo claro/escuro
     ui/                 componentes base (button, input, badge, modal, ...)
+  i18n/                 idiomas: config, dicionários, provider e leitura do cookie
   lib/
     api.ts              cliente da API
     theme.ts            lógica pura do tema

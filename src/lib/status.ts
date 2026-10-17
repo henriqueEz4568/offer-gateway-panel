@@ -1,24 +1,29 @@
 import type { BadgeVariant } from "@/components/ui/badge";
+import type { Dictionary } from "@/i18n/dictionaries";
 import type { GroupStatus } from "./types";
 
 type StatusDisplay = { label: string; variant: BadgeVariant };
+type StatusLabels = Dictionary["status"];
 
-const instanceStatus: Record<string, StatusDisplay> = {
-  open: { label: "Conectada", variant: "success" },
-  connecting: { label: "Conectando", variant: "warning" },
-  close: { label: "Desconectada", variant: "destructive" },
+const instanceVariants: Record<string, BadgeVariant> = {
+  open: "success",
+  connecting: "warning",
+  close: "destructive",
 };
 
-export function getInstanceStatus(status?: string): StatusDisplay {
-  if (!status) return { label: "Desconhecido", variant: "neutral" };
-  return instanceStatus[status] ?? { label: status, variant: "info" };
+export function getInstanceStatus(
+  status: string | undefined,
+  labels: StatusLabels["instance"],
+): StatusDisplay {
+  if (!status) return { label: labels.unknown, variant: "neutral" };
+
+  const variant = instanceVariants[status];
+  return variant
+    ? { label: labels[status as keyof typeof labels], variant }
+    : { label: status, variant: "info" };
 }
 
-export const groupStatusLabels: Record<GroupStatus, string> = {
-  active: "Ativo",
-  pending: "Pendente",
-  disabled: "Desativado",
-};
+export const groupStatuses: GroupStatus[] = ["active", "pending", "disabled"];
 
 const groupStatusVariants: Record<GroupStatus, BadgeVariant> = {
   active: "success",
@@ -26,15 +31,21 @@ const groupStatusVariants: Record<GroupStatus, BadgeVariant> = {
   disabled: "neutral",
 };
 
-export function getGroupStatus(status: GroupStatus): StatusDisplay {
+export function getGroupStatus(
+  status: GroupStatus,
+  labels: StatusLabels["group"],
+): StatusDisplay {
   return {
-    label: groupStatusLabels[status] ?? status,
+    label: labels[status] ?? status,
     variant: groupStatusVariants[status] ?? "info",
   };
 }
 
-export function getOfferStatus(active: boolean): StatusDisplay {
+export function getOfferStatus(
+  active: boolean,
+  labels: StatusLabels["offer"],
+): StatusDisplay {
   return active
-    ? { label: "Ativa", variant: "success" }
-    : { label: "Inativa", variant: "neutral" };
+    ? { label: labels.active, variant: "success" }
+    : { label: labels.inactive, variant: "neutral" };
 }

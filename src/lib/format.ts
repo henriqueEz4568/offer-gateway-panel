@@ -1,21 +1,19 @@
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
+import type { Locale } from "@/i18n/config";
 
-const percentFormatter = new Intl.NumberFormat("pt-BR", {
-  maximumFractionDigits: 2,
-});
-
-export function formatCurrency(value: number | null | undefined) {
+/** Amounts are always in BRL; only the number formatting follows the locale. */
+export function formatCurrency(value: number | null | undefined, locale: Locale) {
   return typeof value === "number" && Number.isFinite(value)
-    ? currencyFormatter.format(value)
+    ? new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: "BRL",
+        currencyDisplay: "narrowSymbol",
+      }).format(value)
     : "—";
 }
 
-/** Formats a rate already expressed in percent (e.g. 12.5 → "12,5%"). */
-export function formatPercent(value: number | null | undefined) {
+/** Formats a rate already expressed in percent (e.g. 12.5 → "12.5%" / "12,5%"). */
+export function formatPercent(value: number | null | undefined, locale: Locale) {
   return typeof value === "number" && Number.isFinite(value)
-    ? `${percentFormatter.format(value)}%`
+    ? `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value)}%`
     : "—";
 }

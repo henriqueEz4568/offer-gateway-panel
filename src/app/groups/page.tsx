@@ -9,28 +9,29 @@ import { Card, PageHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
+import { useI18n } from "@/i18n/provider";
 import { groupsApi } from "@/lib/api";
-import { getGroupStatus, groupStatusLabels } from "@/lib/status";
+import { getGroupStatus, groupStatuses } from "@/lib/status";
 import type { EvolutionGroup, GroupStatus, LinkedGroup } from "@/lib/types";
 import { formatApiError, validateGroupStatus } from "@/lib/validation";
 
 type GroupSource = "database" | "evolution";
 type GroupRow = EvolutionGroup | LinkedGroup;
 
-const sourceOptions = [
-  { label: "Banco de dados", value: "database" },
-  { label: "Evolution API", value: "evolution" },
-];
-
-const statusOptions = (Object.keys(groupStatusLabels) as GroupStatus[]).map(
-  (value) => ({ label: groupStatusLabels[value], value }),
-);
-
 function isLinkedGroup(group: GroupRow): group is LinkedGroup {
   return "externalId" in group;
 }
 
 export default function GroupsPage() {
+  const { t } = useI18n();
+  const sourceOptions = [
+    { label: t.common.sourceDatabase, value: "database" },
+    { label: t.common.sourceEvolution, value: "evolution" },
+  ];
+  const statusOptions = groupStatuses.map((value) => ({
+    label: t.status.group[value],
+    value,
+  }));
   const [groups, setGroups] = useState<GroupRow[]>([]);
   const [source, setSource] = useState<GroupSource>("database");
   // Source of the rows currently displayed (the filter may change before submit).
@@ -56,8 +57,8 @@ export default function GroupsPage() {
         setLoadedSource(sourceToLoad);
       })
       .catch((err) => {
-        toast.error("Não foi possível carregar os grupos.", {
-          description: formatApiError(err),
+        toast.error(t.groups.loadError, {
+          description: formatApiError(err, t.validation.apiFallback),
         });
       })
       .finally(() => setLoading(false));
@@ -81,7 +82,7 @@ export default function GroupsPage() {
 
   async function handleLink(group: EvolutionGroup) {
     if (!validateGroupStatus(status)) {
-      toast.error("Status deve ser ativo, pendente ou desativado.");
+      toast.error(t.groups.invalidStatus);
       return;
     }
 
@@ -102,12 +103,12 @@ export default function GroupsPage() {
           ? linkedGroups.map((item) => (item.id === linked.id ? linked : item))
           : [linked, ...linkedGroups];
       });
-      toast.success(`Grupo ${linked.name} salvo.`, {
-        description: `Status: ${groupStatusLabels[linked.status] ?? linked.status}.`,
+      toast.success(t.groups.saved(linked.name), {
+        description: t.groups.savedStatus(t.status.group[linked.status] ?? linked.status),
       });
     } catch (err) {
-      toast.error("Não foi possível salvar o grupo.", {
-        description: formatApiError(err),
+      toast.error(t.groups.saveError, {
+        description: formatApiError(err, t.validation.apiFallback),
       });
     } finally {
       setLinkingGroupId(null);
@@ -118,11 +119,11 @@ export default function GroupsPage() {
     loadedSource === "database"
       ? [
           {
-            header: "Nome",
+            header: t.common.name,
             accessor: (group) => <span className="font-medium">{group.name}</span>,
           },
           {
-            header: "ID",
+            header: t.common.id,
             accessor: (group) => (
               <span className="font-mono text-xs text-muted-foreground">
                 {isLinkedGroup(group) ? group.id : "—"}
@@ -130,7 +131,7 @@ export default function GroupsPage() {
             ),
           },
           {
-            header: "ID externo",
+            header: t.common.externalId,
             accessor: (group) => (
               <span className="font-mono text-xs text-muted-foreground">
                 {isLinkedGroup(group) ? group.externalId : group.id}
@@ -138,43 +139,43 @@ export default function GroupsPage() {
             ),
           },
           {
-            header: "Status",
+            header: t.common.status,
             accessor: (group) => {
               if (!isLinkedGroup(group)) return "—";
-              const display = getGroupStatus(group.status);
+              const display = getGroupStatus(group.status, t.status.group);
               return <Badge variant={display.variant}>{display.label}</Badge>;
             },
           },
         ]
       : [
           {
-            header: "Nome",
+            header: t.common.name,
             accessor: (group) => <span className="font-medium">{group.name}</span>,
           },
           {
-            header: "ID externo",
+            header: t.common.externalId,
             accessor: (group) => (
               <span className="font-mono text-xs text-muted-foreground">{group.id}</span>
             ),
           },
           {
-            header: "Assunto",
+            header: t.groups.subject,
             accessor: (group) => (isLinkedGroup(group) ? "—" : group.subject),
           },
           {
-            header: "Ação",
+            header: t.common.action,
             className: "text-right",
             accessor: (group) =>
               isLinkedGroup(group) ? null : (
                 <Button
-                  aria-label={`Salvar grupo ${group.name}`}
+                  aria-label={t.groups.saveAria(group.name)}
                   disabled={linkingGroupId === group.id}
                   onClick={() => void handleLink(group)}
                   size="sm"
                   variant="secondary"
                 >
                   <Save aria-hidden />
-                  {linkingGroupId === group.id ? "Salvando..." : "Salvar"}
+                  {linkingGroupId === group.id ? t.common.saving : t.common.save}
                 </Button>
               ),
           },
@@ -183,8 +184,8 @@ export default function GroupsPage() {
   return (
     <>
       <PageHeader
-        description="Liste grupos salvos ou consulte diretamente a Evolution API para salvar novos."
-        title="Grupos"
+        description={t.groups.description}
+        title={t.groups.title}
       />
 
       <Card>
@@ -193,29 +194,29 @@ export default function GroupsPage() {
           onSubmit={handleFilter}
         >
           <Select
-            label="Origem"
+            label={t.common.source}
             onValueChange={(value) => setSource(value as GroupSource)}
             options={sourceOptions}
             value={source}
           />
           <Input
             disabled={source !== "evolution"}
-            hint={source !== "evolution" ? "Disponível na Evolution API." : undefined}
-            label="Instância"
+            hint={source !== "evolution" ? t.groups.evolutionOnly : undefined}
+            label={t.common.instance}
             onChange={(event) => setInstanceName(event.target.value)}
-            placeholder="minha-instancia"
+            placeholder={t.instances.namePlaceholder}
             value={instanceName}
           />
           <Input
             disabled={source !== "evolution"}
-            label="Busca"
+            label={t.common.search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Nome ou ID do grupo"
+            placeholder={t.groups.searchPlaceholder}
             type="search"
             value={search}
           />
           <Select
-            label="Status ao salvar"
+            label={t.groups.statusOnSave}
             onValueChange={(value) => setStatus(value as GroupStatus)}
             options={statusOptions}
             value={status}
@@ -223,7 +224,7 @@ export default function GroupsPage() {
           <div className="flex items-start sm:col-span-2 lg:col-span-1 lg:pt-6">
             <Button className="w-full lg:w-auto" disabled={loading} type="submit">
               <Filter aria-hidden />
-              {loading ? "Filtrando..." : "Filtrar"}
+              {loading ? t.common.filtering : t.common.filter}
             </Button>
           </div>
         </form>
@@ -244,17 +245,17 @@ export default function GroupsPage() {
                   size="sm"
                   variant="secondary"
                 >
-                  Buscar na Evolution API
+                  {t.groups.searchEvolution}
                 </Button>
               ) : undefined
             }
             description={
               loadedSource === "database"
-                ? "Busque grupos na Evolution API e salve os que devem receber ofertas."
-                : "Confira o nome da instância ou ajuste a busca."
+                ? t.groups.emptyDatabase
+                : t.groups.emptyEvolution
             }
             icon={Users}
-            title="Nenhum grupo encontrado"
+            title={t.groups.emptyTitle}
           />
         }
         getRowKey={(group, index) =>
@@ -265,7 +266,7 @@ export default function GroupsPage() {
           )
         }
         loading={loading}
-        loadingLabel="Carregando grupos..."
+        loadingLabel={t.groups.loadingGroups}
       />
     </>
   );
